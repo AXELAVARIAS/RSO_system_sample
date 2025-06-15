@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Research Capacity Building Activities</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Montserrat', Arial, sans-serif;
+      background: #e6e8dd;
+      color: #444;
+    }
+    header {
+      background: #fff;
+      box-shadow: 0 2px 8px #0001;
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      height: 64px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 1.3em;
+      margin-right: 32px;
+    }
+    .logo img {
+      height: 36px;
+      margin-right: 10px;
+    }
+    nav {
+      display: flex;
+      gap: 24px;
+      flex: 1;
+    }
+    nav a {
+      text-decoration: none;
+      color: #444;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    nav a.active, nav a:hover {
+      background: #bfc7a3;
+      color: #fff;
+    }
+    .user-icon {
+      width: 32px;
+      height: 32px;
+      background: #bfc7a3;
+      border-radius: 50%;
+      margin-left: 24px;
+    }
+    .dashboard-bg {
+      background: linear-gradient(135deg, #bfc7a3 0%, #a3b18a 100%);
+      padding: 32px 0 16px 0;
+      margin-bottom: 32px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    h1 {
+      font-size: 2.2em;
+      margin: 0 0 8px 0;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 8px #0002;
+    }
+    .subtitle {
+      color: #f5f5f5;
+      margin-bottom: 32px;
+    }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      box-shadow: 0 2px 8px #0001;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn.upload {
+      background: #bfc7a3;
+      color: #fff;
+    }
+    .btn.upload:hover {
+      background: #a3b18a;
+    }
+    .btn.add {
+      background: #444;
+      color: #fff;
+    }
+    .btn.add:hover {
+      background: #6b705c;
+    }
+    .panel {
+      background: #f5f6f0;
+      border-radius: 24px;
+      box-shadow: 0 2px 16px #0001;
+      padding: 24px;
+      margin-top: 24px;
+    }
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.2em;
+      color: #6b705c;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-bar-wrapper {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .search-bar {
+      width: 100%;
+      padding: 12px 16px 12px 40px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+      box-sizing: border-box;
+      background: #fff;
+      box-shadow: 0 1px 4px #0001;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2em;
+      color: #6b705c;
+      pointer-events: none;
+    }
+    .table-container {
+      overflow-x: auto;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 2px 8px #0001;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    thead {
+      background: #bfc7a3;
+      color: #fff;
+    }
+    th, td {
+      padding: 16px 12px;
+      text-align: left;
+      font-size: 1em;
+    }
+    th {
+      font-weight: 700;
+      color: #fff;
+      background: #bfc7a3;
+    }
+    td {
+      background: #fff;
+      color: #444;
+      vertical-align: middle;
+    }
+    tr:not(:last-child) td {
+      border-bottom: 1px solid #e6e8dd;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 16px;
+      border-radius: 12px;
+      font-size: 0.95em;
+      font-weight: 600;
+    }
+    .status.completed {
+      background: #d4f5e9;
+      color: #3a7d5d;
+    }
+    .status.pending {
+      background: #fff7d6;
+      color: #bfa600;
+    }
+    /* Responsive styles */
+    @media (max-width: 900px) {
+      .container {
+        padding: 0 4px;
+      }
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .panel {
+        padding: 10px;
+      }
+      .table-container, table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+      thead {
+        display: none;
+      }
+      tr {
+        margin-bottom: 16px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px #0001;
+        padding: 8px 0;
+      }
+      td {
+        padding: 12px;
+        border-bottom: none;
+        position: relative;
+      }
+      td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        color: #6b705c;
+        display: block;
+        margin-bottom: 4px;
+      }
+    }
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.3em;
+      }
+      .btn {
+        font-size: 0.95em;
+        padding: 8px 12px;
+      }
+      th, td {
+        font-size: 0.95em;
+        padding: 10px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="rso-bg.png" alt="UC Logo">
+      UC RSO
+    </div>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="Research  Capacity Buildings Activities.html" class="active">Research Capacity Building</a>
+      <a href="Data Collection Tools.html">Data Collection Tools</a>
+      <a href="Ethicss Reviewed Protocols.html">Ethics Reviewed Protocols</a>
+      <a href="Publication and Presentation.html">Publications and Presentations</a>
+      <a href="KPI records.html">KPI Records</a>
+    </nav>
+    <div class="user-icon"></div>
+  </header>
+  <div class="dashboard-bg">
+    <div class="container">
+      <h1>Research Capacity Building Activities</h1>
+      <div class="subtitle">Track faculty development and research enhancement programs</div>
+      <div class="actions">
+        <button class="btn upload">&#8682; Upload Excel File</button>
+        <button class="btn add">+ Add New Entry</button>
+      </div>
+      <div class="panel">
+        <h2>
+          Research Activities Overview
+        </h2>
+        <div class="search-bar-wrapper">
+          <span class="search-icon">&#128269;</span>
+          <input class="search-bar" type="text" placeholder="Search research activities...">
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date of Activity</th>
+                <th>Name of Activity</th>
+                <th>Venue</th>
+                <th>Facilitators/Participants</th>
+                <th>Number of Participants</th>
+                <th>Activity Report</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Date of Activity">2025-05-15</td>
+                <td data-label="Name of Activity"><strong>Grant Writing Workshop</strong></td>
+                <td data-label="Venue">Conference Hall A</td>
+                <td data-label="Facilitators/Participants">Dr. Jane Smith, Faculty Members</td>
+                <td data-label="Number of Participants"><strong>30</strong></td>
+                <td data-label="Activity Report"><span class="status completed">Completed</span></td>
+              </tr>
+              <tr>
+                <td data-label="Date of Activity">2025-05-10</td>
+                <td data-label="Name of Activity"><strong>Research Ethics Seminar</strong></td>
+                <td data-label="Venue">Lecture Room 201</td>
+                <td data-label="Facilitators/Participants">Prof. John Doe, Graduate Students</td>
+                <td data-label="Number of Participants"><strong>45</strong></td>
+                <td data-label="Activity Report"><span class="status pending">Pending</span></td>
+              </tr>
+              <tr>
+                <td data-label="Date of Activity">2025-05-08</td>
+                <td data-label="Name of Activity"><strong>Data Analysis Training</strong></td>
+                <td data-label="Venue">Computer Lab B</td>
+                <td data-label="Facilitators/Participants">Dr. Alice Johnson, Research Assistants</td>
+                <td data-label="Number of Participants"><strong>20</strong></td>
+                <td data-label="Activity Report"><span class="status completed">Completed</span></td>
+              </tr>
+              <tr>
+                <td data-label="Date of Activity">2025-05-05</td>
+                <td data-label="Name of Activity"><strong>Qualitative Research Methods</strong></td>
+                <td data-label="Venue">Seminar Room 1</td>
+                <td data-label="Facilitators/Participants">Prof. Robert Brown, Undergraduate Students</td>
+                <td data-label="Number of Participants"><strong>35</strong></td>
+                <td data-label="Activity Report"><span class="status pending">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
