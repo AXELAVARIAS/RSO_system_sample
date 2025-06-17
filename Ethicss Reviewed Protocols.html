@@ -55,6 +55,20 @@
       border-radius: 50%;
       margin-left: 24px;
     }
+    .login-btn {
+      background: #bfc7a3;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-left: 24px;
+    }
+    .login-btn:hover {
+      background: #a3b18a;
+    }
     .dashboard-bg {
       background: linear-gradient(135deg, #bfc7a3 0%, #a3b18a 100%);
       padding: 32px 0 16px 0;
@@ -276,6 +290,11 @@
         font-size: 0.95em;
         padding: 10px 6px;
       }
+      .login-btn {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -293,6 +312,7 @@
       <a href="Publication and Presentation.html">Publications and Presentations</a>
       <a href="KPI records.html">KPI Records</a>
     </nav>
+    <button class="login-btn" onclick="window.location.href='loginpage.html'">Login</button>
     <div class="user-icon"></div>
   </header>
   <div class="dashboard-bg">
