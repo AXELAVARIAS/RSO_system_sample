@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login page Research Management System</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+    <a href="../index.html" class="back-btn">Back to Dashboard</a>
+    <div class="login-container">
+        <div class="logo">
+            <img src="../pics/rso-bg.png" alt="UC Logo">
+            <h1>RSO Research Management System</h1>
+        </div>
+        
+        <div class="user-type-selector">
+            <button class="user-type-btn active" onclick="selectUserType(this, 'faculty')">Faculty Member</button>
+            <button class="user-type-btn" onclick="selectUserType(this, 'rso')">RSO Member</button>
+        </div>
+
+        <form id="loginForm" onsubmit="return handleLogin(event)">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+
+        <div class="forgot-password">
+            <a href="#">Forgot Password?</a>
+        </div>
+    </div>
+
+    <script>
+        function selectUserType(button, type) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.user-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const userType = document.querySelector('.user-type-btn.active').textContent.trim();
+            
+            // Here you would typically make an API call to verify credentials
+            console.log('Login attempt:', { email, password, userType });
+            
+            // For demo purposes, redirect to index page
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

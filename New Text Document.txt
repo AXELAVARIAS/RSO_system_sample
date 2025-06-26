@@ -1,0 +1,42 @@
+<?php
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $userType = $_POST['userType'];
+
+    if ($userType == "staff") {
+        header("Location: faculty.php");
+        exit();
+    } elseif ($userType == "student") {
+        header("Location: student.php");
+        exit();
+    } elseif ($userType == "admin") {
+        header("Location: admin.php");
+        exit();
+    } else {
+        $error = "Please select a user type.";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login Page</title>
+</head>
+<body>
+
+  <h2>Select User Type</h2>
+
+  <form method="POST" action="">
+    <select name="userType">
+      <option value="">-- Select --</option>
+      <option value="staff">Staff</option>
+      <option value="student">Student</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button type="submit">Login</button>
+  </form>
+
+  <?php if (!empty($error)) echo "<p style='color:red;'>$error</p>"; ?>
+
+</body>
+</html>

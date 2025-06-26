@@ -1,0 +1,218 @@
+<?php
+session_start();
+// Default entries
+$default_entries = [
+    ['2025-05-15', 'Grant Writing Workshop', 'Conference Hall A', 'Dr. Jane Smith, Faculty Members', '30', 'Completed'],
+    ['2025-05-10', 'Research Ethics Seminar', 'Lecture Room 201', 'Prof. John Doe, Graduate Students', '45', 'Pending'],
+    ['2025-05-08', 'Data Analysis Training', 'Computer Lab B', 'Dr. Alice Johnson, Research Assistants', '20', 'Completed'],
+    ['2025-05-05', 'Qualitative Research Methods', 'Seminar Room 1', 'Prof. Robert Brown, Undergraduate Students', '35', 'Pending'],
+];
+// Initialize session data if not set
+if (!isset($_SESSION['entries'])) {
+    $_SESSION['entries'] = $default_entries;
+}
+if (!isset($_SESSION['archived'])) {
+    $_SESSION['archived'] = [];
+}
+// Handle add, delete, archive
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action']) && isset($_POST['entry_index'])) {
+        $action = $_POST['action'];
+        $entry_index = (int)$_POST['entry_index'];
+        if (isset($_SESSION['entries'][$entry_index])) {
+            $entry = $_SESSION['entries'][$entry_index];
+            if ($action === 'delete') {
+                array_splice($_SESSION['entries'], $entry_index, 1);
+            } elseif ($action === 'archive') {
+                $_SESSION['archived'][] = $entry;
+                array_splice($_SESSION['entries'], $entry_index, 1);
+            }
+        }
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    } elseif (!isset($_POST['action'])) {
+        // Add new entry
+        $date = $_POST['date'] ?? '';
+        $name = $_POST['name'] ?? '';
+        $venue = $_POST['venue'] ?? '';
+        $facilitators = $_POST['facilitators'] ?? '';
+        $num_participants = $_POST['num_participants'] ?? '';
+        $status = $_POST['status'] ?? '';
+        if ($date && $name && $venue && $facilitators && $num_participants && $status) {
+            $entry = [$date, $name, $venue, $facilitators, $num_participants, $status];
+            $_SESSION['entries'][] = $entry;
+        }
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+}
+$all_entries = $_SESSION['entries'];
+$archived_entries = $_SESSION['archived'];
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Research Capacity Building Activities</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
+ <link rel="stylesheet" href="../css/research capacity.css">
+ <style>
+ .add-entry-form { display: none; background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+ .add-entry-form.active { display: block; }
+ .add-entry-form input, .add-entry-form select { margin-bottom: 10px; width: 100%; padding: 8px; }
+ .add-entry-form label { font-weight: bold; }
+ .action-btns { display: flex; gap: 5px; }
+ .action-btns form { display: inline; }
+ .action-btns button { padding: 4px 10px; font-size: 0.9em; border-radius: 4px; border: none; cursor: pointer; }
+ .action-btns .delete { background: #e57373; color: #fff; }
+ .action-btns .archive { background: #ffd54f; color: #333; }
+ .archived-section { margin-top: 40px; background: #f3f3f3; padding: 20px; border-radius: 8px; }
+ .archived-section h3 { margin-top: 0; }
+ </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../pics/rso-bg.png" alt="UC Logo">
+      UC RSO
+    </div>
+    <nav>
+      <a href="../index.html">Dashboard</a>
+      <a href="Research  Capacity Buildings Activities.php" class="active">Research Capacity Building</a>
+      <a href="Data Collection Tools.php">Data Collection Tools</a>
+      <a href="Ethicss Reviewed Protocols.php">Ethics Reviewed Protocols</a>
+      <a href="Publication and Presentation.php">Publications and Presentations</a>
+      <a href="KPI records.html">KPI Records</a>
+    </nav>
+    <button class="login-btn" onclick="window.location.href='loginpage.html'">Login</button>
+  </header>
+  <div class="dashboard-bg">
+    <div class="container">
+      <h1>Research Capacity Building Activities</h1>
+      <div class="subtitle">Track faculty development and research enhancement programs</div>
+      <div class="actions">
+        <button class="btn upload">&#8682; Upload Excel File</button>
+        <button class="btn add" id="showAddForm">+ Add New Entry</button>
+      </div>
+      <form class="add-entry-form" id="addEntryForm" method="post" action="">
+        <label>Date of Activity:<br><input type="date" name="date" required></label><br>
+        <label>Name of Activity:<br><input type="text" name="name" required></label><br>
+        <label>Venue:<br><input type="text" name="venue" required></label><br>
+        <label>Facilitators/Participants:<br><input type="text" name="facilitators" required></label><br>
+        <label>Number of Participants:<br><input type="number" name="num_participants" min="1" required></label><br>
+        <label>Activity Report Status:<br>
+          <select name="status" required>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </label><br>
+        <button type="submit" class="btn">Add Entry</button>
+        <button type="button" class="btn" id="cancelAddForm">Cancel</button>
+      </form>
+      <div class="panel">
+        <h2>Research Activities Overview</h2>
+        <div class="search-bar-wrapper">
+          <span class="search-icon">&#128269;</span>
+          <input class="search-bar" type="text" placeholder="Search research activities..." onkeyup="filterTable()">
+        </div>
+        <div class="table-container">
+          <table id="activitiesTable">
+            <thead>
+              <tr>
+                <th>Date of Activity</th>
+                <th>Name of Activity</th>
+                <th>Venue</th>
+                <th>Facilitators/Participants</th>
+                <th>Number of Participants</th>
+                <th>Activity Report</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($all_entries as $i => $entry): ?>
+              <tr>
+                <td data-label="Date of Activity"><?php echo htmlspecialchars($entry[0]); ?></td>
+                <td data-label="Name of Activity"><strong><?php echo htmlspecialchars($entry[1]); ?></strong></td>
+                <td data-label="Venue"><?php echo htmlspecialchars($entry[2]); ?></td>
+                <td data-label="Facilitators/Participants"><?php echo htmlspecialchars($entry[3]); ?></td>
+                <td data-label="Number of Participants"><strong><?php echo htmlspecialchars($entry[4]); ?></strong></td>
+                <td data-label="Activity Report"><span class="status <?php echo strtolower($entry[5]); ?>"><?php echo htmlspecialchars($entry[5]); ?></span></td>
+                <td class="action-btns">
+                  <form method="post" action="" style="display:inline">
+                    <input type="hidden" name="entry_index" value="<?php echo $i; ?>">
+                    <input type="hidden" name="action" value="archive">
+                    <button type="submit" class="archive" title="Archive">Archive</button>
+                  </form>
+                  <form method="post" action="" style="display:inline">
+                    <input type="hidden" name="entry_index" value="<?php echo $i; ?>">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="delete" title="Delete" onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <?php if (count($archived_entries) > 0): ?>
+      <div class="archived-section">
+        <h3>Archived Activities</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date of Activity</th>
+                <th>Name of Activity</th>
+                <th>Venue</th>
+                <th>Facilitators/Participants</th>
+                <th>Number of Participants</th>
+                <th>Activity Report</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($archived_entries as $entry): ?>
+              <tr>
+                <td><?php echo htmlspecialchars($entry[0]); ?></td>
+                <td><strong><?php echo htmlspecialchars($entry[1]); ?></strong></td>
+                <td><?php echo htmlspecialchars($entry[2]); ?></td>
+                <td><?php echo htmlspecialchars($entry[3]); ?></td>
+                <td><strong><?php echo htmlspecialchars($entry[4]); ?></strong></td>
+                <td><span class="status <?php echo strtolower($entry[5]); ?>"><?php echo htmlspecialchars($entry[5]); ?></span></td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <script>
+    document.getElementById('showAddForm').onclick = function() {
+      document.getElementById('addEntryForm').classList.add('active');
+    };
+    document.getElementById('cancelAddForm').onclick = function() {
+      document.getElementById('addEntryForm').classList.remove('active');
+    };
+    function filterTable() {
+      var input = document.querySelector('.search-bar');
+      var filter = input.value.toLowerCase();
+      var table = document.getElementById('activitiesTable');
+      var trs = table.getElementsByTagName('tr');
+      for (var i = 1; i < trs.length; i++) {
+        var tds = trs[i].getElementsByTagName('td');
+        var show = false;
+        for (var j = 0; j < tds.length; j++) {
+          if (tds[j].textContent.toLowerCase().indexOf(filter) > -1) {
+            show = true;
+            break;
+          }
+        }
+        trs[i].style.display = show ? '' : 'none';
+      }
+    }
+  </script>
+</body>
+</html> 

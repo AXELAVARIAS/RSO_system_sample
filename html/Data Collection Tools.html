@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Data Collection Tools</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/data collection tools.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../pics/rso-bg.png" alt="UC Logo">
+      UC RSO
+    </div>
+    <nav>
+      <a href="../index.html">Dashboard</a>
+      <a href="Research  Capacity Buildings Activities.html">Research Capacity Building</a>
+      <a href="Data Collection Tools.html" class="active">Data Collection Tools</a>
+      <a href="Ethicss Reviewed Protocols.html">Ethics Reviewed Protocols</a>
+      <a href="Publication and Presentation.html">Publications and Presentations</a>
+      <a href="KPI records.html">KPI Records</a>
+    </nav>
+    <button class="login-btn" onclick="window.location.href='loginpage.html'">Login</button>
+   
+  </header>
+  <div class="dashboard-bg">
+    <div class="container">
+      <h1>Data Collection Tools</h1>
+      <div class="subtitle">Manage faculty research publications and presentation records</div>
+      <div class="actions">
+        <button class="btn upload">&#8682; Upload Excel File</button>
+        <button class="btn add">+ Add New Entry</button>
+      </div>
+      <div class="panel">
+        <h2>Data Collection Overview</h2>
+        <div class="search-bar-wrapper">
+          <span class="search-icon">&#128269;</span>
+          <input class="search-bar" type="text" placeholder="Search data collection records...">
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name of Faculty</th>
+                <th>Degree</th>
+                <th>Sex</th>
+                <th>Research Title</th>
+                <th>Ownership</th>
+                <th>Date & Venue Presented</th>
+                <th>Date Published</th>
+                <th>Journal Published</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Name of Faculty"><strong>Dr. Sarah Johnson</strong></td>
+                <td data-label="Degree">Ph.D.</td>
+                <td data-label="Sex">Female</td>
+                <td data-label="Research Title">Machine Learning Applications in Healthcare</td>
+                <td data-label="Ownership"><strong>Author</strong></td>
+                <td data-label="Date & Venue Presented">05,15,25 - International AI Conference</td>
+                <td data-label="Date Published">2025-04-20</td>
+                <td data-label="Journal Published">Journal of Medical Informatics</td>
+              </tr>
+              <tr>
+                <td data-label="Name of Faculty"><strong>Prof. Michael Chen</strong></td>
+                <td data-label="Degree">Ph.D.</td>
+                <td data-label="Sex">Male</td>
+                <td data-label="Research Title">Sustainable Energy Systems in Urban Planning</td>
+                <td data-label="Ownership"><strong>Co-Author</strong></td>
+                <td data-label="Date & Venue Presented">04,22,25 - Green Cities Summit</td>
+                <td data-label="Date Published">2025-03-15</td>
+                <td data-label="Journal Published">Environmental Engineering Review</td>
+              </tr>
+              <tr>
+                <td data-label="Name of Faculty"><strong>Dr. Emily Rodriguez</strong></td>
+                <td data-label="Degree">Ph.D.</td>
+                <td data-label="Sex">Female</td>
+                <td data-label="Research Title">Educational Technology Impact on Student Learning</td>
+                <td data-label="Ownership"><strong>Author</strong></td>
+                <td data-label="Date & Venue Presented">03,10,25 - EdTech Innovation Forum</td>
+                <td data-label="Date Published">2025-02-28</td>
+                <td data-label="Journal Published">Educational Technology Research</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
