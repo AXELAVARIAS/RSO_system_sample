@@ -1,4 +1,14 @@
 <?php
+session_start();
+if (empty($_SESSION['logged_in'])) {
+    header('Location: loginpage.php');
+    exit;
+}
+if (isset($_POST['logout'])) {
+    session_destroy();
+    header('Location: loginpage.php');
+    exit;
+}
 // File to store entries
 $data_file = __DIR__ . '/publication_presentation.csv';
 
@@ -119,9 +129,112 @@ if (isset($_GET['edit'])) {
   <link rel="stylesheet" href="../css/publication.css">
   <style>
     .edit-entry-form { background: #f1f1f1; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      z-index: 1000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    body {
+      margin: 0;
+      padding-top: 80px;
+    }
+    .profile-menu {
+      position: fixed;
+      top: 18px;
+      right: 40px;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+    }
+    .profile-icon-btn {
+      background: #e9ecdf;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: background 0.2s;
+      font-size: 1.7rem;
+      padding: 0;
+    }
+    .profile-icon-btn:hover {
+      background: #d2d8c2;
+    }
+    .profile-dropdown {
+      display: none;
+      position: absolute;
+      top: 54px;
+      right: 0;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+      min-width: 180px;
+      padding: 12px 0 6px 0;
+      text-align: right;
+      animation: fadeIn 0.2s;
+    }
+    .profile-menu.open .profile-dropdown {
+      display: block;
+    }
+    .profile-dropdown .profile-info {
+      padding: 0 18px 8px 18px;
+      color: #6a7a5e;
+      font-size: 0.98rem;
+      border-bottom: 1px solid #e3e3d9;
+      margin-bottom: 8px;
+    }
+    .profile-dropdown form {
+      margin: 0;
+      padding: 0 18px;
+    }
+    .profile-dropdown button {
+      background: #b94a48;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 18px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 6px;
+      width: 100%;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .profile-dropdown button:hover {
+      background: #a94442;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
+  <div class="profile-menu" id="profileMenu">
+    <button class="profile-icon-btn" id="profileIconBtn" aria-label="Profile">
+      <!-- SVG user icon -->
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
+    </button>
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="profile-info">
+        <?php echo htmlspecialchars($_SESSION['user_email'] ?? 'User'); ?><br>
+        <span style="font-size:0.92em; color:#9a9a8a;">
+          <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
+        </span>
+      </div>
+      <form method="post">
+        <button type="submit" name="logout">Logout</button>
+      </form>
+    </div>
+  </div>
   <header>
     <div class="logo">
       <img src="../pics/rso-bg.png" alt="UC Logo">
@@ -135,7 +248,7 @@ if (isset($_GET['edit'])) {
       <a href="Publication and Presentation.php" class="active">Publications and Presentations</a>
       <a href="KPI records.php">KPI Records</a>
     </nav>
-    <button class="login-btn" onclick="window.location.href='loginpage.php'">Login</button>
+    
   </header>
   <div class="dashboard-bg">
     <div class="container">
@@ -275,6 +388,16 @@ if (isset($_GET['edit'])) {
         }
       }
     }
+    const profileMenu = document.getElementById('profileMenu');
+    const profileIconBtn = document.getElementById('profileIconBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    document.addEventListener('click', function(e) {
+      if (profileMenu.contains(e.target)) {
+        profileMenu.classList.toggle('open');
+      } else {
+        profileMenu.classList.remove('open');
+      }
+    });
   </script>
 </body>
 </html> 
