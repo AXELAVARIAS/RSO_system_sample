@@ -418,3 +418,23 @@ body {
     margin: 0;
     padding-top: 80px;
   }
+  .admin-btn {
+    background: #6a7a5e;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-left: 20px;
+    transition: background 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    font-weight: 500;
+  }
+  .admin-btn:hover {
+    background: #5a6b4e;
+    color: #fff;
+    text-decoration: none;
+  }
