@@ -306,3 +306,115 @@ body {
       font-size: 0.9em;
     }
   }
+  .profile-menu {
+    position: fixed;
+    top: 18px;
+    right: 40px;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+  }
+  .profile-icon-btn {
+    background: #e9ecdf;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: background 0.2s;
+    font-size: 1.7rem;
+    padding: 0;
+  }
+  .profile-icon-btn:hover {
+    background: #d2d8c2;
+  }
+  .profile-dropdown {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    padding: 22px 20px 16px 20px;
+    min-width: 220px;
+    position: absolute;
+    right: 0;
+    top: 48px;
+    z-index: 100;
+    display: none;
+    transition: box-shadow 0.2s;
+  }
+  .profile-menu.open .profile-dropdown {
+    display: block;
+  }
+  .profile-info {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .profile-info .profile-name {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: #4a5a36;
+    margin-bottom: 2px;
+  }
+  .profile-info .profile-dept {
+    font-size: 0.98em;
+    color: #7a8a6e;
+    margin-bottom: 1px;
+  }
+  .profile-info .profile-type {
+    font-size: 0.92em;
+    color: #b0b0a8;
+  }
+  .profile-dropdown .edit-profile-link {
+    display: block;
+    text-align: center;
+    color: #6a7a5e;
+    background: #f6f8f4;
+    border-radius: 6px;
+    padding: 8px 0;
+    margin: 10px 0 12px 0;
+    font-size: 0.98em;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+  }
+  .profile-dropdown .edit-profile-link:hover {
+    background: #e2e8db;
+    color: #3a4a26;
+  }
+  .profile-dropdown form {
+    margin: 0;
+  }
+  .profile-dropdown button[type="submit"] {
+    width: 100%;
+    background: #b94a4a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 0;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .profile-dropdown button[type="submit"]:hover {
+    background: #a13a3a;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    z-index: 1000;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  body {
+    margin: 0;
+    padding-top: 80px;
+  }

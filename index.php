@@ -10,6 +10,159 @@ if (isset($_POST['logout'])) {
     header('Location: php/loginpage.php');
     exit;
 }
+// Count publications from CSV
+$publications_count = 0;
+$pub_file = __DIR__ . '/php/publication_presentation.csv';
+if (file_exists($pub_file)) {
+    $file = fopen($pub_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row)) {
+            $publications_count++;
+        }
+    }
+    fclose($file);
+}
+// Gather recent updates from multiple sources
+$recent_updates = [];
+// Publications
+if (file_exists($pub_file)) {
+    $file = fopen($pub_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row) && !empty($row[0])) {
+            $recent_updates[] = [
+                'date' => $row[0],
+                'title' => $row[2],
+                'meta' => 'Publication • ' . $row[1],
+                'type' => 'Publication',
+            ];
+        }
+    }
+    fclose($file);
+}
+// Research Activities
+$research_file = __DIR__ . '/php/research_capacity_data.csv';
+if (file_exists($research_file)) {
+    $file = fopen($research_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row) && !empty($row[0])) {
+            $recent_updates[] = [
+                'date' => $row[0],
+                'title' => $row[1],
+                'meta' => 'Research Activity • ' . $row[3],
+                'type' => 'Research Activity',
+            ];
+        }
+    }
+    fclose($file);
+}
+// Ethics Protocols (no date, use last row as latest)
+$ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
+if (file_exists($ethics_file)) {
+    $rows = [];
+    $file = fopen($ethics_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row)) {
+            $rows[] = $row;
+        }
+    }
+    fclose($file);
+    if (!empty($rows)) {
+        $last = end($rows);
+        $recent_updates[] = [
+            'date' => '',
+            'title' => $last[1],
+            'meta' => 'Ethics Protocol • ' . $last[2],
+            'type' => 'Ethics Protocol',
+        ];
+    }
+}
+// KPI Records (period as date, use last row)
+$kpi_file = __DIR__ . '/php/kpi_records.csv';
+if (file_exists($kpi_file)) {
+    $rows = [];
+    $file = fopen($kpi_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row)) {
+            $rows[] = $row;
+        }
+    }
+    fclose($file);
+    if (!empty($rows)) {
+        $last = end($rows);
+        $recent_updates[] = [
+            'date' => $last[1],
+            'title' => 'KPI Update: ' . $last[0],
+            'meta' => 'KPI Update • ' . $last[6],
+            'type' => 'KPI',
+        ];
+    }
+}
+// Count ethics protocols from CSV
+$ethics_count = 0;
+$ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
+if (file_exists($ethics_file)) {
+    $file = fopen($ethics_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row)) {
+            $ethics_count++;
+        }
+    }
+    fclose($file);
+}
+// Count research activities from CSV
+$research_count = 0;
+$research_file = __DIR__ . '/php/research_capacity_data.csv';
+if (file_exists($research_file)) {
+    $file = fopen($research_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row)) {
+            $research_count++;
+        }
+    }
+    fclose($file);
+}
+// Calculate average KPI score from CSV
+$kpi_scores = [];
+$kpi_file = __DIR__ . '/php/kpi_records.csv';
+if (file_exists($kpi_file)) {
+    $file = fopen($kpi_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row) && isset($row[5]) && is_numeric($row[5])) {
+            $kpi_scores[] = floatval($row[5]);
+        }
+    }
+    fclose($file);
+}
+$average_kpi = count($kpi_scores) ? round(array_sum($kpi_scores) / count($kpi_scores), 2) : 0;
+// Sort by date (descending, where possible)
+function parse_date($d) {
+    if (preg_match('/\d{4}-\d{2}-\d{2}/', $d)) return strtotime($d);
+    if (preg_match('/\d{4}/', $d)) return strtotime(str_replace(' -', '-01-01', $d));
+    return 0;
+}
+usort($recent_updates, function($a, $b) {
+    return parse_date($b['date']) <=> parse_date($a['date']);
+});
+$recent_updates = array_slice($recent_updates, 0, 5);
+// Build research activity trends by month for the current year
+$activity_by_month = array_fill(1, 12, 0);
+$current_year = date('Y');
+if (file_exists($research_file)) {
+    $file = fopen($research_file, 'r');
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row) && !empty($row[0])) {
+            $date = $row[0];
+            $ts = strtotime($date);
+            if ($ts && date('Y', $ts) == $current_year) {
+                $month = (int)date('n', $ts);
+                $activity_by_month[$month]++;
+            }
+        }
+    }
+    fclose($file);
+}
+$month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+$max_activities = max($activity_by_month) ?: 1;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,94 +171,7 @@ if (isset($_POST['logout'])) {
   <title>Faculty Research Management System</title>
   <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
  <link rel="stylesheet" href="css/index.css">
-  <style>
-    .profile-menu {
-      position: fixed;
-      top: 18px;
-      right: 40px;
-      z-index: 1100;
-      display: flex;
-      align-items: center;
-    }
-    .profile-icon-btn {
-      background: #e9ecdf;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: background 0.2s;
-      font-size: 1.7rem;
-      padding: 0;
-    }
-    .profile-icon-btn:hover {
-      background: #d2d8c2;
-    }
-    .profile-dropdown {
-      display: none;
-      position: absolute;
-      top: 54px;
-      right: 0;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-      min-width: 180px;
-      padding: 12px 0 6px 0;
-      text-align: right;
-      animation: fadeIn 0.2s;
-    }
-    .profile-menu.open .profile-dropdown {
-      display: block;
-    }
-    .profile-dropdown .profile-info {
-      padding: 0 18px 8px 18px;
-      color: #6a7a5e;
-      font-size: 0.98rem;
-      border-bottom: 1px solid #e3e3d9;
-      margin-bottom: 8px;
-    }
-    .profile-dropdown form {
-      margin: 0;
-      padding: 0 18px;
-    }
-    .profile-dropdown button {
-      background: #b94a48;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 7px 18px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-top: 6px;
-      width: 100%;
-      text-align: center;
-      transition: background 0.2s;
-    }
-    .profile-dropdown button:hover {
-      background: #a94442;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      z-index: 1000;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    body {
-      margin: 0;
-      padding-top: 80px;
-    }
-  </style>
+ 
 </head>
 <body>
   <div class="profile-menu" id="profileMenu">
@@ -114,11 +180,17 @@ if (isset($_POST['logout'])) {
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
     </button>
     <div class="profile-dropdown" id="profileDropdown">
-      <div class="profile-info">
-        <?php echo htmlspecialchars($_SESSION['user_email'] ?? 'User'); ?><br>
-        <span style="font-size:0.92em; color:#9a9a8a;">
-          <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
-        </span>
+      <div style="font-weight: 600; margin-bottom: 4px;">
+        <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>
+      </div>
+      <div style="font-size:0.9em; color:#6a7a5e; margin-bottom:2px;">
+        <?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?>
+      </div>
+      <div style="font-size:0.85em; color:#9a9a8a;">
+        <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
+      </div>
+      <div style="border-top: 1px solid #eee; margin: 10px 0; padding-top: 10px;">
+        <a href="php/edit_profile.php" style="display: block; color: #6a7a5e; text-decoration: none; padding: 8px 0; font-size: 0.9em;">Edit Profile</a>
       </div>
       <form method="post">
         <button type="submit" name="logout">Logout</button>
@@ -158,92 +230,73 @@ if (isset($_POST['logout'])) {
       <div class="metrics">
         <div class="card">
           <div class="label">Research Activities</div>
-          <div class="value">124</div>
-          <div class="change">+12% from last month</div>
+          <div class="value"><?php echo $research_count; ?></div>
         </div>
         <div class="card">
           <div class="label">Ethics Protocols</div>
-          <div class="value">38</div>
-          <div class="change">+5% from last month</div>
+          <div class="value"><?php echo $ethics_count; ?></div>
         </div>
         <div class="card">
           <div class="label">Publications</div>
-          <div class="value">267</div>
-          <div class="change">+18% from last month</div>
+          <div class="value"><?php echo $publications_count; ?></div>
         </div>
         <div class="card">
           <div class="label">Average KPI Score</div>
-          <div class="value">8.4</div>
-          <div class="change">+0.3 from last quarter</div>
+          <div class="value"><?php echo $average_kpi; ?></div>
         </div>
       </div>
     </div>
   </div>
   <div class="container main-content">
     <div class="panel">
-      <h2>Research Activity Trends</h2>
-      <div class="bar-chart">
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 60px;"></div>
-          <div class="bar bar2" style="height: 40px;"></div>
-          <div class="bar bar3" style="height: 20px;"></div>
-          <div class="bar-label">Jan</div>
-        </div>
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 90px;"></div>
-          <div class="bar bar2" style="height: 60px;"></div>
-          <div class="bar bar3" style="height: 30px;"></div>
-          <div class="bar-label">Feb</div>
-        </div>
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 120px;"></div>
-          <div class="bar bar2" style="height: 80px;"></div>
-          <div class="bar bar3" style="height: 40px;"></div>
-          <div class="bar-label">Mar</div>
-        </div>
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 100px;"></div>
-          <div class="bar bar2" style="height: 100px;"></div>
-          <div class="bar bar3" style="height: 60px;"></div>
-          <div class="bar-label">Apr</div>
-        </div>
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 140px;"></div>
-          <div class="bar bar2" style="height: 120px;"></div>
-          <div class="bar bar3" style="height: 40px;"></div>
-          <div class="bar-label">May</div>
-        </div>
-        <div class="bar-group">
-          <div class="bar bar1" style="height: 110px;"></div>
-          <div class="bar bar2" style="height: 90px;"></div>
-          <div class="bar bar3" style="height: 70px;"></div>
-          <div class="bar-label">Jun</div>
+      <!-- Chart Title -->
+      <div style="text-align:center; font-weight:600; font-size:1.15em; margin-bottom: 10px;">
+        Research Activities per Month (<?php echo date('Y'); ?>)
+      </div>
+      <div class="bar-chart-modern" style="position:relative; height:240px; padding: 30px 30px 40px 30px; border-left: 2px solid #e0e0e0; border-bottom: 2px solid #e0e0e0; background: #fafbfa;">
+        <?php
+          // Y-axis grid lines and labels
+          $y_max = ceil($max_activities / 5) * 5;
+          $y_step = max(1, ceil($y_max / 5));
+          for ($y = $y_max; $y >= 0; $y -= $y_step) {
+            $y_pos = 30 + (180 - ($y / $y_max) * 180);
+            echo '<div style="position:absolute;left:0;top:'.($y_pos-8).'px;width:100%;border-top:1px dashed #e0e0e0;font-size:0.85em;color:#b0b0a8;">';
+            echo '<span style="position:absolute;left:-32px;width:30px;text-align:right;">'.$y.'</span>';
+            echo '</div>';
+          }
+        ?>
+        <div style="display:flex; align-items:flex-end; height:180px; position:relative; z-index:2;">
+          <?php foreach ($activity_by_month as $i => $count): ?>
+            <?php
+              $bar_height = $max_activities ? round(($count/$max_activities)*160) : 0;
+              $bar_color = "#4a90e2";
+            ?>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; margin:0 6px;">
+              <!-- Value label above bar -->
+              <div style="font-size:0.95em; color:#333; margin-bottom:2px; height:22px;">
+                <?php if ($count > 0) echo $count; ?>
+              </div>
+              <!-- Bar -->
+              <div style="width: 32px; height: <?php echo $bar_height; ?>px; background: <?php echo $bar_color; ?>; border-radius: 4px 4px 0 0; box-shadow:0 2px 6px rgba(0,0,0,0.04);"></div>
+              <!-- Month label below bar -->
+              <div style="font-size:0.95em; color:#6a7a5e; margin-top:6px;"><?php echo $month_names[$i-1]; ?></div>
+            </div>
+          <?php endforeach; ?>
         </div>
       </div>
     </div>
     <div class="panel right">
       <h2>Recent Updates</h2>
       <ul class="updates-list">
+        <?php foreach ($recent_updates as $update): ?>
         <li>
-          <div class="update-title">AI in Education Research Project</div>
-          <div class="update-meta">Research Activity • Dr. Smith</div>
-          <div class="update-date">2025-05-28</div>
+          <div class="update-title"><?php echo htmlspecialchars($update['title']); ?></div>
+          <div class="update-meta"><?php echo htmlspecialchars($update['meta']); ?></div>
+          <?php if (!empty($update['date'])): ?>
+          <div class="update-date"><?php echo htmlspecialchars($update['date']); ?></div>
+          <?php endif; ?>
         </li>
-        <li>
-          <div class="update-title">Machine Learning Applications in Healthcare</div>
-          <div class="update-meta">Publication • Prof. Johnson</div>
-          <div class="update-date">2025-05-27</div>
-        </li>
-        <li>
-          <div class="update-title">Student Learning Behavior Study</div>
-          <div class="update-meta">Ethics Protocol • Dr. Williams</div>
-          <div class="update-date">2025-05-26</div>
-        </li>
-        <li>
-          <div class="update-title">Q2 Performance Review</div>
-          <div class="update-meta">KPI Update • Dr. Brown</div>
-          <div class="update-date">2025-05-25</div>
-        </li>
+        <?php endforeach; ?>
       </ul>
     </div>
   </div>

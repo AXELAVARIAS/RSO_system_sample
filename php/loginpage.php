@@ -16,9 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $reg_email = $_POST['reg_email'] ?? '';
         $reg_password = $_POST['reg_password'] ?? '';
         $reg_userType = $_POST['reg_user_type'] ?? '';
+        $reg_fullName = $_POST['reg_full_name'] ?? '';
+        $reg_department = $_POST['reg_department'] ?? '';
+        
         if ($reg_userType === 'admin') {
             $register_error = 'Admin account cannot be registered.';
-        } elseif ($reg_email && $reg_password && $reg_userType) {
+        } elseif ($reg_email && $reg_password && $reg_userType && $reg_fullName && $reg_department) {
             $users_file = 'users.csv';
             $user_exists = false;
             if (file_exists($users_file)) {
@@ -35,12 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $register_error = 'User already exists.';
             } else {
                 $file = fopen($users_file, 'a');
-                fputcsv($file, [$reg_email, password_hash($reg_password, PASSWORD_DEFAULT), $reg_userType]);
+                fputcsv($file, [$reg_email, password_hash($reg_password, PASSWORD_DEFAULT), $reg_userType, $reg_fullName, $reg_department]);
                 fclose($file);
                 // Auto-login after registration
                 $_SESSION['logged_in'] = true;
                 $_SESSION['user_email'] = $reg_email;
                 $_SESSION['user_type'] = $reg_userType;
+                $_SESSION['user_full_name'] = $reg_fullName;
+                $_SESSION['user_department'] = $reg_department;
                 header('Location: ../index.php');
                 exit;
             }
@@ -55,6 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $users_file = 'users.csv';
         $login_valid = false;
         $is_admin = false;
+        $user_full_name = '';
+        $user_department = '';
+        
         // Admin login: check first, regardless of user type
         if ($email === $admin_email && $password === $admin_password) {
             $login_valid = true;
@@ -64,6 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             while (($data = fgetcsv($file)) !== false) {
                 if ($data[0] === $email && $data[2] === $userType && password_verify($password, $data[1])) {
                     $login_valid = true;
+                    $user_full_name = $data[3] ?? '';
+                    $user_department = $data[4] ?? '';
                     break;
                 }
             }
@@ -73,9 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['logged_in'] = true;
             $_SESSION['user_email'] = $email;
             $_SESSION['user_type'] = $is_admin ? 'admin' : $userType;
+            $_SESSION['user_full_name'] = $user_full_name;
+            $_SESSION['user_department'] = $user_department;
             if ($is_admin) {
                 $_SESSION['admin_logged_in'] = true;
                 header('Location: manage_faculty.php');
+            
             } else {
                 header('Location: ../index.php');
             }
@@ -141,6 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             <form id="registerForm" method="post" action="">
                 <input type="hidden" name="reg_user_type" id="reg_user_type" value="<?php echo !empty($_POST['reg_user_type']) ? htmlspecialchars($_POST['reg_user_type']) : 'faculty'; ?>">
+                <div class="form-group">
+                    <label for="reg_full_name">Full Name</label>
+                    <input type="text" id="reg_full_name" name="reg_full_name" required placeholder="Enter your full name" value="<?php echo isset($_POST['reg_full_name']) ? htmlspecialchars($_POST['reg_full_name']) : ''; ?>">
+                </div>
+                <div class="form-group">
+                    <label for="reg_department">Department</label>
+                    <input type="text" id="reg_department" name="reg_department" required placeholder="Enter your department" value="<?php echo isset($_POST['reg_department']) ? htmlspecialchars($_POST['reg_department']) : ''; ?>">
+                </div>
                 <div class="form-group">
                     <label for="reg_email">Email</label>
                     <input type="email" id="reg_email" name="reg_email" required placeholder="Enter your email" value="<?php echo isset($_POST['reg_email']) ? htmlspecialchars($_POST['reg_email']) : ''; ?>">

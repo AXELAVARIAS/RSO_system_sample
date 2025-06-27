@@ -214,17 +214,21 @@ if (isset($_GET['edit'])) {
   </style>
 </head>
 <body>
-  <div class="profile-menu" id="profileMenu">
+<div class="profile-menu" id="profileMenu">
     <button class="profile-icon-btn" id="profileIconBtn" aria-label="Profile">
       <!-- SVG user icon -->
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
     </button>
     <div class="profile-dropdown" id="profileDropdown">
       <div class="profile-info">
-        <?php echo htmlspecialchars($_SESSION['user_email'] ?? 'User'); ?><br>
-        <span style="font-size:0.92em; color:#9a9a8a;">
-          <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
-        </span>
+        <?php 
+        $fullName = $_SESSION['user_full_name'] ?? 'User';
+        $department = $_SESSION['user_department'] ?? 'Department';
+        $userType = ucfirst($_SESSION['user_type'] ?? '');
+        ?>
+        <div style="font-weight: 600; margin-bottom: 4px;"><?php echo htmlspecialchars($fullName); ?></div>
+        <div style="font-size: 0.9em; color: #6a7a5e; margin-bottom: 2px;"><?php echo htmlspecialchars($department); ?></div>
+        <div style="font-size: 0.85em; color: #9a9a8a;"><?php echo htmlspecialchars($userType); ?></div>
       </div>
       <form method="post">
         <button type="submit" name="logout">Logout</button>
