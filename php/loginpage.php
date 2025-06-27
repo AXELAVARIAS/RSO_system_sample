@@ -56,22 +56,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Login logic
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
-        $userType = $_POST['user_type'] ?? '';
         $users_file = 'users.csv';
         $login_valid = false;
         $is_admin = false;
         $user_full_name = '';
         $user_department = '';
+        $user_type = '';
         
-        // Admin login: check first, regardless of user type
+        // Admin login: check first
         if ($email === $admin_email && $password === $admin_password) {
             $login_valid = true;
             $is_admin = true;
-        } elseif ($email && $password && $userType && file_exists($users_file)) {
+        } elseif ($email && $password && file_exists($users_file)) {
             $file = fopen($users_file, 'r');
             while (($data = fgetcsv($file)) !== false) {
-                if ($data[0] === $email && $data[2] === $userType && password_verify($password, $data[1])) {
+                if ($data[0] === $email && password_verify($password, $data[1])) {
                     $login_valid = true;
+                    $user_type = $data[2] ?? '';
                     $user_full_name = $data[3] ?? '';
                     $user_department = $data[4] ?? '';
                     break;
@@ -82,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($login_valid) {
             $_SESSION['logged_in'] = true;
             $_SESSION['user_email'] = $email;
-            $_SESSION['user_type'] = $is_admin ? 'admin' : $userType;
+            $_SESSION['user_type'] = $is_admin ? 'admin' : $user_type;
             $_SESSION['user_full_name'] = $user_full_name;
             $_SESSION['user_department'] = $user_department;
             if ($is_admin) {
@@ -94,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             exit;
         } else {
-            $login_error = 'Invalid credentials or user type.';
+            $login_error = 'Invalid credentials.';
         }
     }
 }
@@ -115,10 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h1>RSO Research Management System</h1>
         </div>
         <div id="login-section" style="display:<?php echo ($register_success || isset($_POST['register'])) ? 'none' : 'block'; ?>;">
-            <div class="user-type-selector">
-                <button class="user-type-btn<?php if (empty($_POST['user_type']) || $_POST['user_type'] === 'faculty') echo ' active'; ?>" type="button" onclick="selectUserType(this, 'faculty')">Faculty Member</button>
-                <button class="user-type-btn<?php if (!empty($_POST['user_type']) && $_POST['user_type'] === 'rso') echo ' active'; ?>" type="button" onclick="selectUserType(this, 'rso')">RSO Member</button>
-            </div>
             <?php if ($login_error): ?>
             <div class="login-error" style="color:red; margin-bottom:10px; text-align:center;"> <?php echo htmlspecialchars($login_error); ?> </div>
             <?php endif; ?>
@@ -126,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="login-success" style="color:green; margin-bottom:10px; text-align:center;"> <?php echo htmlspecialchars($register_success); ?> </div>
             <?php endif; ?>
             <form id="loginForm" method="post" action="">
-                <input type="hidden" name="user_type" id="user_type" value="<?php echo !empty($_POST['user_type']) ? htmlspecialchars($_POST['user_type']) : 'faculty'; ?>">
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="text" id="email" name="email" required placeholder="Enter your email or username" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
@@ -178,13 +174,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
     <script>
-        function selectUserType(button, type) {
-            document.querySelectorAll('.user-type-selector:first-of-type .user-type-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            button.classList.add('active');
-            document.getElementById('user_type').value = type;
-        }
         function selectRegUserType(button, type) {
             document.querySelectorAll('#register-section .user-type-btn').forEach(btn => {
                 btn.classList.remove('active');

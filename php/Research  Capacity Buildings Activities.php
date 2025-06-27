@@ -179,20 +179,14 @@ if (isset($_GET['edit'])) {
    background: #fff;
    border-radius: 10px;
    box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-   min-width: 180px;
-   padding: 12px 0 6px 0;
-   text-align: right;
+   min-width: 240px;
+   padding: 16px 20px 12px 20px;
+   text-align: left;
    animation: fadeIn 0.2s;
+   box-sizing: border-box;
  }
  .profile-menu.open .profile-dropdown {
    display: block;
- }
- .profile-dropdown .profile-info {
-   padding: 0 18px 8px 18px;
-   color: #6a7a5e;
-   font-size: 0.98rem;
-   border-bottom: 1px solid #e3e3d9;
-   margin-bottom: 8px;
  }
  .profile-dropdown form {
    margin: 0;
@@ -227,15 +221,17 @@ if (isset($_GET['edit'])) {
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
     </button>
     <div class="profile-dropdown" id="profileDropdown">
-      <div class="profile-info">
-        <?php 
-        $fullName = $_SESSION['user_full_name'] ?? 'User';
-        $department = $_SESSION['user_department'] ?? 'Department';
-        $userType = ucfirst($_SESSION['user_type'] ?? '');
-        ?>
-        <div style="font-weight: 600; margin-bottom: 4px;"><?php echo htmlspecialchars($fullName); ?></div>
-        <div style="font-size: 0.9em; color: #6a7a5e; margin-bottom: 2px;"><?php echo htmlspecialchars($department); ?></div>
-        <div style="font-size: 0.85em; color: #9a9a8a;"><?php echo htmlspecialchars($userType); ?></div>
+      <div style="font-weight: 600; margin-bottom: 4px; text-align: left;">
+        <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>
+      </div>
+      <div style="font-size:0.9em; color:#6a7a5e; margin-bottom:2px; text-align: left;">
+        <?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?>
+      </div>
+      <div style="font-size:0.85em; color:#9a9a8a; text-align: left;">
+        <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
+      </div>
+      <div style="border-top: 1px solid #eee; margin: 10px 0; padding-top: 10px; text-align: left;">
+        <a href="edit_profile.php" style="display: block; color: #6a7a5e; text-decoration: none; padding: 8px 0; font-size: 0.9em; text-align: left;">Edit Profile</a>
       </div>
       <form method="post">
         <button type="submit" name="logout">Logout</button>
