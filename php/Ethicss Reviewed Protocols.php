@@ -87,15 +87,6 @@ $default_entries = [
     ['EP-2025-004', 'Social Media Usage Patterns Research', 'Sociology Department', 'Pending', 'Initial Review in Progress'],
 ];
 
-// On first load, if CSV is empty, populate with default entries
-if (!file_exists($data_file) || filesize($data_file) === 0) {
-    $fp = fopen($data_file, 'w');
-    foreach ($default_entries as $entry) {
-        fputcsv($fp, $entry);
-    }
-    fclose($fp);
-}
-
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {

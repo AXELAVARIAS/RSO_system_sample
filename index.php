@@ -10,13 +10,15 @@ if (isset($_POST['logout'])) {
     header('Location: php/loginpage.php');
     exit;
 }
-// Count publications from CSV
+// Count publications from CSV (skip header)
 $publications_count = 0;
 $pub_file = __DIR__ . '/php/publication_presentation.csv';
 if (file_exists($pub_file)) {
     $file = fopen($pub_file, 'r');
+    // Always skip the first row (header)
+    fgetcsv($file);
     while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row)) {
+        if (!empty($row) && !empty(array_filter($row))) {
             $publications_count++;
         }
     }
@@ -27,7 +29,12 @@ $recent_updates = [];
 // Publications
 if (file_exists($pub_file)) {
     $file = fopen($pub_file, 'r');
+    $is_first_row = true;
     while (($row = fgetcsv($file)) !== false) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         if (!empty($row) && !empty($row[0])) {
             $recent_updates[] = [
                 'date' => $row[0],
@@ -55,12 +62,17 @@ if (file_exists($research_file)) {
     }
     fclose($file);
 }
-// Ethics Protocols (no date, use last row as latest)
+// Ethics Protocols (no date, use last row as latest, skip header)
 $ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
 if (file_exists($ethics_file)) {
     $rows = [];
     $file = fopen($ethics_file, 'r');
+    $is_first_row = true;
     while (($row = fgetcsv($file)) !== false) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         if (!empty($row)) {
             $rows[] = $row;
         }
@@ -97,13 +109,15 @@ if (file_exists($kpi_file)) {
         ];
     }
 }
-// Count ethics protocols from CSV
+// Count ethics protocols from CSV (skip header)
 $ethics_count = 0;
 $ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
 if (file_exists($ethics_file)) {
     $file = fopen($ethics_file, 'r');
+    // Always skip the first row (header)
+    fgetcsv($file);
     while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row)) {
+        if (!empty($row) && !empty(array_filter($row))) {
             $ethics_count++;
         }
     }

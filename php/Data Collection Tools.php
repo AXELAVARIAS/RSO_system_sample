@@ -92,15 +92,6 @@ $default_entries = [
     ['Dr. Emily Rodriguez', 'Ph.D.', 'Female', 'Educational Technology Impact on Student Learning', 'Author', '03,10,25 - EdTech Innovation Forum', '2025-02-28', 'Educational Technology Research'],
 ];
 
-// On first load, if CSV is empty, populate with default entries
-if (!file_exists($data_file) || filesize($data_file) === 0) {
-    $fp = fopen($data_file, 'w');
-    foreach ($default_entries as $entry) {
-        fputcsv($fp, $entry);
-    }
-    fclose($fp);
-}
-
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {

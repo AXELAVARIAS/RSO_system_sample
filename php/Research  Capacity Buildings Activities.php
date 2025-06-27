@@ -13,23 +13,6 @@ if (isset($_POST['logout'])) {
 // File to store entries
 $data_file = __DIR__ . '/research_capacity_data.csv';
 
-// Default entries (for demo)
-$default_entries = [
-    ['2025-05-15', 'Grant Writing Workshop', 'Conference Hall A', 'Dr. Jane Smith, Faculty Members', '30', 'Completed'],
-    ['2025-05-10', 'Research Ethics Seminar', 'Lecture Room 201', 'Prof. John Doe, Graduate Students', '45', 'Pending'],
-    ['2025-05-08', 'Data Analysis Training', 'Computer Lab B', 'Dr. Alice Johnson, Research Assistants', '20', 'Completed'],
-    ['2025-05-05', 'Qualitative Research Methods', 'Seminar Room 1', 'Prof. Robert Brown, Undergraduate Students', '35', 'Pending'],
-];
-
-// On first load, if CSV is empty, populate with default entries
-if (!file_exists($data_file) || filesize($data_file) === 0) {
-    $fp = fopen($data_file, 'w');
-    foreach ($default_entries as $entry) {
-        fputcsv($fp, $entry);
-    }
-    fclose($fp);
-}
-
 // Handle form submission (add, edit, delete)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Read all entries
