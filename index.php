@@ -26,25 +26,25 @@ if (file_exists($pub_file)) {
 }
 // Gather recent updates from multiple sources
 $recent_updates = [];
-// Publications
+// Publications (show last 3)
 if (file_exists($pub_file)) {
+    $rows = [];
     $file = fopen($pub_file, 'r');
-    $is_first_row = true;
     while (($row = fgetcsv($file)) !== false) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         if (!empty($row) && !empty($row[0])) {
-            $recent_updates[] = [
-                'date' => $row[0],
-                'title' => $row[2],
-                'meta' => 'Publication • ' . $row[1],
-                'type' => 'Publication',
-            ];
+            $rows[] = $row;
         }
     }
     fclose($file);
+    $recent_pubs = array_slice($rows, -3); // get last 3
+    foreach ($recent_pubs as $row) {
+        $recent_updates[] = [
+            'date' => $row[0],
+            'title' => isset($row[2]) ? $row[2] : '',
+            'meta' => 'Publication • ' . (isset($row[1]) ? $row[1] : ''),
+            'type' => 'Publication',
+        ];
+    }
 }
 // Research Activities
 $research_file = __DIR__ . '/php/research_capacity_data.csv';
@@ -62,30 +62,30 @@ if (file_exists($research_file)) {
     }
     fclose($file);
 }
-// Ethics Protocols (no date, use last row as latest, skip header)
+// Ethics Protocols (no date, use last 3 rows as latest, skip header)
 $ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
 if (file_exists($ethics_file)) {
     $rows = [];
     $file = fopen($ethics_file, 'r');
-    $is_first_row = true;
     while (($row = fgetcsv($file)) !== false) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         if (!empty($row)) {
             $rows[] = $row;
         }
     }
     fclose($file);
     if (!empty($rows)) {
-        $last = end($rows);
-        $recent_updates[] = [
-            'date' => '',
-            'title' => $last[1],
-            'meta' => 'Ethics Protocol • ' . $last[2],
-            'type' => 'Ethics Protocol',
-        ];
+        $recent_ethics = array_slice($rows, -3); // get last 3
+        foreach ($recent_ethics as $ethics) {
+            // Defensive: check if columns exist
+            $title = isset($ethics[1]) ? $ethics[1] : '';
+            $meta = isset($ethics[2]) ? $ethics[2] : '';
+            $recent_updates[] = [
+                'date' => '',
+                'title' => $title,
+                'meta' => 'Ethics Protocol • ' . $meta,
+                'type' => 'Ethics Protocol',
+            ];
+        }
     }
 }
 // KPI Records (period as date, use last row)

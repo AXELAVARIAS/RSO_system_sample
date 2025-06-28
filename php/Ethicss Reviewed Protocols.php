@@ -71,7 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($no && $title && $department && $status && $action) {
         $entry = [$no, $title, $department, $status, $action];
+        $write_header = false;
+        if (!file_exists($data_file) || filesize($data_file) === 0) {
+            $write_header = true;
+        }
         $fp = fopen($data_file, 'a');
+        if ($write_header) {
+            fputcsv($fp, ['No', 'Title', 'Department', 'Status', 'Action']);
+        }
         fputcsv($fp, $entry);
         fclose($fp);
     }
