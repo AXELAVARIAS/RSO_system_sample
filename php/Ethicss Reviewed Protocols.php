@@ -71,12 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($no && $title && $department && $status && $action) {
         $entry = [$no, $title, $department, $status, $action];
-        $write_header = false;
-        if (!file_exists($data_file) || filesize($data_file) === 0) {
-            $write_header = true;
-        }
+        // Check if file exists and has content
+        $file_exists = file_exists($data_file) && filesize($data_file) > 0;
         $fp = fopen($data_file, 'a');
-        if ($write_header) {
+        // Only write header if file doesn't exist or is empty
+        if (!$file_exists) {
             fputcsv($fp, ['No', 'Title', 'Department', 'Status', 'Action']);
         }
         fputcsv($fp, $entry);
@@ -98,7 +97,13 @@ $default_entries = [
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            // Skip header row
+            continue;
+        }
         $entries[] = $row;
     }
     fclose($fp);

@@ -92,7 +92,12 @@ $dct_file = 'data_collection_tools.csv';
 $dct_entries = [];
 if (file_exists($dct_file)) {
     $fp = fopen($dct_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $dct_entries[] = $row;
     }
     fclose($fp);
@@ -104,6 +109,7 @@ if (isset($_POST['delete_dct']) && isset($_POST['dct_index'])) {
     if (isset($dct_entries[$index])) {
         array_splice($dct_entries, $index, 1);
         $fp = fopen($dct_file, 'w');
+        fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
         foreach ($dct_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -127,6 +133,7 @@ if (isset($_POST['save_dct_edit']) && isset($_POST['dct_index'])) {
     if ($faculty_name && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
         $dct_entries[$index] = [$faculty_name, $degree, $sex, $title, $ownership, $presented, $published, $journal];
         $fp = fopen($dct_file, 'w');
+        fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
         foreach ($dct_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -143,7 +150,12 @@ $kpi_file = 'kpi_records.csv';
 $kpi_entries = [];
 if (file_exists($kpi_file)) {
     $fp = fopen($kpi_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $kpi_entries[] = $row;
     }
     fclose($fp);
@@ -155,6 +167,7 @@ if (isset($_POST['delete_kpi']) && isset($_POST['kpi_index'])) {
     if (isset($kpi_entries[$index])) {
         array_splice($kpi_entries, $index, 1);
         $fp = fopen($kpi_file, 'w');
+        fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
         foreach ($kpi_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -175,6 +188,7 @@ if (isset($_POST['save_kpi_edit']) && isset($_POST['kpi_index'])) {
     if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
         $kpi_entries[$index] = [$faculty, $period, $publications, $trainings, $presentations, $score, $performance];
         $fp = fopen($kpi_file, 'w');
+        fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
         foreach ($kpi_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -189,7 +203,12 @@ $ethics_file = 'ethics_reviewed_protocols.csv';
 $ethics_entries = [];
 if (file_exists($ethics_file)) {
     $fp = fopen($ethics_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $ethics_entries[] = $row;
     }
     fclose($fp);
@@ -201,6 +220,7 @@ if (isset($_POST['delete_ethics']) && isset($_POST['ethics_index'])) {
     if (isset($ethics_entries[$index])) {
         array_splice($ethics_entries, $index, 1);
         $fp = fopen($ethics_file, 'w');
+        fputcsv($fp, ['No.', 'Title', 'Department', 'Status', 'Action']);
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -219,6 +239,7 @@ if (isset($_POST['save_ethics_edit']) && isset($_POST['ethics_index'])) {
     if ($no && $title && $department && $status && $action) {
         $ethics_entries[$index] = [$no, $title, $department, $status, $action];
         $fp = fopen($ethics_file, 'w');
+        fputcsv($fp, ['No.', 'Title', 'Department', 'Status', 'Action']);
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -233,7 +254,12 @@ $pub_file = 'publication_presentation.csv';
 $pub_entries = [];
 if (file_exists($pub_file)) {
     $fp = fopen($pub_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $pub_entries[] = $row;
     }
     fclose($fp);
@@ -245,6 +271,7 @@ if (isset($_POST['delete_pub']) && isset($_POST['pub_index'])) {
     if (isset($pub_entries[$index])) {
         array_splice($pub_entries, $index, 1);
         $fp = fopen($pub_file, 'w');
+        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
         foreach ($pub_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -265,6 +292,7 @@ if (isset($_POST['save_pub_edit']) && isset($_POST['pub_index'])) {
     if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
         $pub_entries[$index] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
         $fp = fopen($pub_file, 'w');
+        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
         foreach ($pub_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -279,7 +307,12 @@ $rcb_file = 'research_capacity_data.csv';
 $rcb_entries = [];
 if (file_exists($rcb_file)) {
     $fp = fopen($rcb_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $rcb_entries[] = $row;
     }
     fclose($fp);
@@ -291,6 +324,7 @@ if (isset($_POST['delete_rcb']) && isset($_POST['rcb_index'])) {
     if (isset($rcb_entries[$index])) {
         array_splice($rcb_entries, $index, 1);
         $fp = fopen($rcb_file, 'w');
+        fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
         foreach ($rcb_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -310,6 +344,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
     if ($date && $name && $venue && $facilitators && $num_participants && $status) {
         $rcb_entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
         $fp = fopen($rcb_file, 'w');
+        fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
         foreach ($rcb_entries as $entry) {
             fputcsv($fp, $entry);
         }

@@ -75,14 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $locality = $_POST['locality'] ?? '';
     if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
         $entry = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
-        $write_header = false;
-        if (!file_exists($data_file) || filesize($data_file) === 0) {
-            $write_header = true;
-        }
+        
+        // Check if file exists and has content
+        $file_exists = file_exists($data_file) && filesize($data_file) > 0;
+        
         $fp = fopen($data_file, 'a');
-        if ($write_header) {
+        
+        // Only write header if file doesn't exist or is empty
+        if (!$file_exists) {
             fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
         }
+        
         fputcsv($fp, $entry);
         fclose($fp);
     }
@@ -101,7 +104,13 @@ $default_entries = [
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            // Skip header row
+            continue;
+        }
         $entries[] = $row;
     }
     fclose($fp);
