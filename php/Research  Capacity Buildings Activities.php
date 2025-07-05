@@ -19,7 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entries = [];
     if (file_exists($data_file)) {
         $fp = fopen($data_file, 'r');
+        $is_first_row = true;
         while ($row = fgetcsv($fp)) {
+            if ($is_first_row) {
+                $is_first_row = false;
+                continue; // skip header
+            }
             $entries[] = $row;
         }
         fclose($fp);
@@ -31,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -53,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date && $name && $venue && $facilitators && $num_participants && $status) {
             $entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -70,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date && $name && $venue && $facilitators && $num_participants && $status) {
             $entries[] = [$date, $name, $venue, $facilitators, $num_participants, $status];
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -85,7 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $entries[] = $row;
     }
     fclose($fp);

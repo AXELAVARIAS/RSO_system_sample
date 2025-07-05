@@ -14,20 +14,27 @@ $data_file = __DIR__ . '/publication_presentation.csv';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Read all entries (skip header)
+    $entries = [];
+    if (file_exists($data_file)) {
+        $fp = fopen($data_file, 'r');
+        $is_first_row = true;
+        while ($row = fgetcsv($fp)) {
+            if ($is_first_row) {
+                $is_first_row = false;
+                continue; // skip header
+            }
+            $entries[] = $row;
+        }
+        fclose($fp);
+    }
     // Handle delete
     if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
         $index = (int)$_POST['index'];
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -38,14 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Handle edit save
     if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
         $index = (int)$_POST['index'];
         $date = $_POST['date'] ?? '';
         $faculty = $_POST['faculty'] ?? '';
@@ -57,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
             $entries[$index] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -74,6 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? '';
     $locality = $_POST['locality'] ?? '';
     if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
+<<<<<<< HEAD
+        $entries[] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
+        $fp = fopen($data_file, 'w');
+        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
+        foreach ($entries as $entry) {
+            fputcsv($fp, $entry);
+        }
+=======
         $entry = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
         
         // Check if file exists and has content
@@ -87,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         fputcsv($fp, $entry);
+>>>>>>> 1a45931fd31d5f14183946795bd7dae27e65635b
         fclose($fp);
     }
     header('Location: ' . $_SERVER['PHP_SELF']);

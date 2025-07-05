@@ -4,6 +4,11 @@ if (empty($_SESSION['logged_in'])) {
     header('Location: php/loginpage.php');
     exit;
 }
+// Redirect admin users to admin dashboard
+if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+    header('Location: php/manage_faculty.php');
+    exit;
+}
 // Handle logout
 if (isset($_POST['logout'])) {
     session_destroy();
@@ -128,6 +133,8 @@ $research_count = 0;
 $research_file = __DIR__ . '/php/research_capacity_data.csv';
 if (file_exists($research_file)) {
     $file = fopen($research_file, 'r');
+    // Always skip the first row (header)
+    fgetcsv($file);
     while (($row = fgetcsv($file)) !== false) {
         if (!empty($row)) {
             $research_count++;
@@ -177,6 +184,20 @@ if (file_exists($research_file)) {
 }
 $month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 $max_activities = max($activity_by_month) ?: 1;
+// Count data collection tools from CSV (skip header)
+$data_tools_count = 0;
+$dct_file = __DIR__ . '/php/data_collection_tools.csv';
+if (file_exists($dct_file)) {
+    $file = fopen($dct_file, 'r');
+    // Always skip the first row (header)
+    fgetcsv($file);
+    while (($row = fgetcsv($file)) !== false) {
+        if (!empty($row) && !empty(array_filter($row))) {
+            $data_tools_count++;
+        }
+    }
+    fclose($file);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -253,6 +274,10 @@ $max_activities = max($activity_by_month) ?: 1;
         <div class="card">
           <div class="label">Publications</div>
           <div class="value"><?php echo $publications_count; ?></div>
+        </div>
+        <div class="card">
+          <div class="label">Data Collection Tools</div>
+          <div class="value"><?php echo $data_tools_count; ?></div>
         </div>
         <div class="card">
           <div class="label">Average KPI Score</div>

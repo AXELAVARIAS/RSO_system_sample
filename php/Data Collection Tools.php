@@ -14,20 +14,27 @@ $data_file = __DIR__ . '/data_collection_tools.csv';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Read all entries (skip header)
+    $entries = [];
+    if (file_exists($data_file)) {
+        $fp = fopen($data_file, 'r');
+        $is_first_row = true;
+        while ($row = fgetcsv($fp)) {
+            if ($is_first_row) {
+                $is_first_row = false;
+                continue; // skip header
+            }
+            $entries[] = $row;
+        }
+        fclose($fp);
+    }
     // Handle delete
     if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
         $index = (int)$_POST['index'];
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -38,14 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Handle edit save
     if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
         $index = (int)$_POST['index'];
         $faculty = $_POST['faculty'] ?? '';
         $degree = $_POST['degree'] ?? '';
@@ -58,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
             $entries[$index] = [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal];
             $fp = fopen($data_file, 'w');
+            fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -76,9 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $published = $_POST['published'] ?? '';
     $journal = $_POST['journal'] ?? '';
     if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
-        $entry = [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal];
-        $fp = fopen($data_file, 'a');
-        fputcsv($fp, $entry);
+        $entries[] = [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal];
+        $fp = fopen($data_file, 'w');
+        fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
+        foreach ($entries as $entry) {
+            fputcsv($fp, $entry);
+        }
         fclose($fp);
     }
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -96,7 +99,12 @@ $default_entries = [
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // skip header
+        }
         $entries[] = $row;
     }
     fclose($fp);
