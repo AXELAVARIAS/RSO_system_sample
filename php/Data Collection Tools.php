@@ -414,10 +414,10 @@ if (isset($_GET['edit'])) {
                     </div>
                   </td>
                   <td data-label="Degree">
-                    <span class="degree-badge"><?php echo htmlspecialchars($entry[1]); ?></span>
+                    <?php echo htmlspecialchars($entry[1]); ?>
                   </td>
                   <td data-label="Sex">
-                    <span class="sex-badge"><?php echo htmlspecialchars($entry[2]); ?></span>
+                    <?php echo htmlspecialchars($entry[2]); ?>
                   </td>
                   <td data-label="Research Title">
                     <div class="title-content">
@@ -425,9 +425,7 @@ if (isset($_GET['edit'])) {
                     </div>
                   </td>
                   <td data-label="Ownership">
-                    <span class="ownership-badge ownership-<?php echo strtolower(str_replace(' ', '-', $entry[4])); ?>">
-                      <?php echo htmlspecialchars($entry[4]); ?>
-                    </span>
+                    <?php echo htmlspecialchars($entry[4]); ?>
                   </td>
                   <td data-label="Presented At">
                     <span class="presentation-info"><?php echo htmlspecialchars($entry[5]); ?></span>
@@ -470,46 +468,6 @@ if (isset($_GET['edit'])) {
   </main>
 
   <style>
-    .degree-badge {
-      background: #e0f2fe;
-      color: #0369a1;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    
-    .sex-badge {
-      background: #f3e8ff;
-      color: #7c3aed;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    
-    .ownership-badge {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    
-    .ownership-author {
-      background: #dcfce7;
-      color: #166534;
-    }
-    
-    .ownership-co-author {
-      background: #fef3c7;
-      color: #92400e;
-    }
-    
-    .ownership-contributor {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-    
     .faculty-info strong {
       color: var(--text-primary);
       font-weight: 600;

@@ -434,12 +434,13 @@ if (isset($_GET['edit'])) {
     }
     
     .participants-count {
-      background: #f0f9ff;
-      color: #0369a1;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      /* Remove background and color styling for plain text */
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+      font-weight: inherit;
     }
   </style>
 

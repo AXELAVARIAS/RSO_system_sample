@@ -47,14 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fclose($fp);
         }
         $index = (int)$_POST['index'];
-        $kpi_name = $_POST['kpi_name'] ?? '';
+        $faculty_name = $_POST['faculty_name'] ?? '';
         $period = $_POST['period'] ?? '';
-        $target = $_POST['target'] ?? '';
-        $actual = $_POST['actual'] ?? '';
-        $achievement = $_POST['achievement'] ?? '';
-        $status = $_POST['status'] ?? '';
-        if ($kpi_name && $period && $target && $actual && $achievement && $status) {
-            $entries[$index] = [$kpi_name, $period, $target, $actual, $achievement, $status];
+        $publications = $_POST['publications'] ?? '';
+        $trainings = $_POST['trainings'] ?? '';
+        $presentations = $_POST['presentations'] ?? '';
+        $kpi_score = $_POST['kpi_score'] ?? '';
+        $performance = $_POST['performance'] ?? '';
+        if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
+            $entries[$index] = [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance];
             $fp = fopen($data_file, 'w');
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
@@ -65,14 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     // Handle add
-    $kpi_name = $_POST['kpi_name'] ?? '';
+    $faculty_name = $_POST['faculty_name'] ?? '';
     $period = $_POST['period'] ?? '';
-    $target = $_POST['target'] ?? '';
-    $actual = $_POST['actual'] ?? '';
-    $achievement = $_POST['achievement'] ?? '';
-    $status = $_POST['status'] ?? '';
-    if ($kpi_name && $period && $target && $actual && $achievement && $status) {
-        $entry = [$kpi_name, $period, $target, $actual, $achievement, $status];
+    $publications = $_POST['publications'] ?? '';
+    $trainings = $_POST['trainings'] ?? '';
+    $presentations = $_POST['presentations'] ?? '';
+    $kpi_score = $_POST['kpi_score'] ?? '';
+    $performance = $_POST['performance'] ?? '';
+    if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
+        $entry = [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance];
         $fp = fopen($data_file, 'a');
         fputcsv($fp, $entry);
         fclose($fp);
@@ -81,19 +83,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Predefined entries
+// Predefined entries (optional, can be removed or edited)
 $default_entries = [
-    ['Research Publications', 'Q1 2025', '15', '12', '80%', 'On Track'],
-    ['Research Funding', 'Q1 2025', '₱2,000,000', '₱1,850,000', '92.5%', 'Exceeded'],
-    ['Student Research Projects', 'Q1 2025', '25', '28', '112%', 'Exceeded'],
-    ['International Collaborations', 'Q1 2025', '8', '6', '75%', 'On Track'],
+    ['Dr. Sarah Johnson', 'Q1 2025', '3', '2', '1', '95', 'Excellent'],
+    ['Prof. Michael Chen', 'Q1 2025', '2', '1', '2', '88', 'Good'],
+    ['Dr. Emily Rodriguez', 'Q1 2025', '4', '3', '2', '99', 'Outstanding'],
 ];
 
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // Skip header row
+        }
         $entries[] = $row;
     }
     fclose($fp);
@@ -239,34 +245,32 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="">
             <div class="form-group">
-              <label for="kpi_name">KPI Name</label>
-              <input type="text" id="kpi_name" name="kpi_name" required placeholder="Enter KPI name">
+              <label for="faculty_name">Faculty Name</label>
+              <input type="text" id="faculty_name" name="faculty_name" required placeholder="Enter faculty name">
             </div>
             <div class="form-group">
               <label for="period">Period</label>
               <input type="text" id="period" name="period" required placeholder="e.g., Q1 2025">
             </div>
             <div class="form-group">
-              <label for="target">Target</label>
-              <input type="text" id="target" name="target" required placeholder="Enter target value">
+              <label for="publications">Publications</label>
+              <input type="number" id="publications" name="publications" required placeholder="Enter number of publications">
             </div>
             <div class="form-group">
-              <label for="actual">Actual</label>
-              <input type="text" id="actual" name="actual" required placeholder="Enter actual value">
+              <label for="trainings">Trainings</label>
+              <input type="number" id="trainings" name="trainings" required placeholder="Enter number of trainings">
             </div>
             <div class="form-group">
-              <label for="achievement">Achievement (%)</label>
-              <input type="text" id="achievement" name="achievement" required placeholder="Enter achievement percentage">
+              <label for="presentations">Presentations</label>
+              <input type="number" id="presentations" name="presentations" required placeholder="Enter number of presentations">
             </div>
             <div class="form-group">
-              <label for="status">Status</label>
-              <select id="status" name="status" required>
-                <option value="">Select status</option>
-                <option value="On Track">On Track</option>
-                <option value="Exceeded">Exceeded</option>
-                <option value="Behind Schedule">Behind Schedule</option>
-                <option value="At Risk">At Risk</option>
-              </select>
+              <label for="kpi_score">KPI Score</label>
+              <input type="number" id="kpi_score" name="kpi_score" required placeholder="Enter KPI score">
+            </div>
+            <div class="form-group">
+              <label for="performance">Performance</label>
+              <input type="text" id="performance" name="performance" required placeholder="Enter performance">
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
@@ -289,33 +293,32 @@ if (isset($_GET['edit'])) {
             <input type="hidden" name="save_edit" value="1">
             <input type="hidden" name="index" id="editIndex">
             <div class="form-group">
-              <label for="editKpiName">KPI Name</label>
-              <input type="text" id="editKpiName" name="kpi_name" required>
+              <label for="editFacultyName">Faculty Name</label>
+              <input type="text" id="editFacultyName" name="faculty_name" required>
             </div>
             <div class="form-group">
               <label for="editPeriod">Period</label>
               <input type="text" id="editPeriod" name="period" required>
             </div>
             <div class="form-group">
-              <label for="editTarget">Target</label>
-              <input type="text" id="editTarget" name="target" required>
+              <label for="editPublications">Publications</label>
+              <input type="number" id="editPublications" name="publications" required>
             </div>
             <div class="form-group">
-              <label for="editActual">Actual</label>
-              <input type="text" id="editActual" name="actual" required>
+              <label for="editTrainings">Trainings</label>
+              <input type="number" id="editTrainings" name="trainings" required>
             </div>
             <div class="form-group">
-              <label for="editAchievement">Achievement (%)</label>
-              <input type="text" id="editAchievement" name="achievement" required>
+              <label for="editPresentations">Presentations</label>
+              <input type="number" id="editPresentations" name="presentations" required>
             </div>
             <div class="form-group">
-              <label for="editStatus">Status</label>
-              <select id="editStatus" name="status" required>
-                <option value="On Track">On Track</option>
-                <option value="Exceeded">Exceeded</option>
-                <option value="Behind Schedule">Behind Schedule</option>
-                <option value="At Risk">At Risk</option>
-              </select>
+              <label for="editKpiScore">KPI Score</label>
+              <input type="number" id="editKpiScore" name="kpi_score" required>
+            </div>
+            <div class="form-group">
+              <label for="editPerformance">Performance</label>
+              <input type="text" id="editPerformance" name="performance" required>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
@@ -342,19 +345,20 @@ if (isset($_GET['edit'])) {
           <table class="data-table" id="kpiTable">
             <thead>
               <tr>
-                <th>KPI Name</th>
+                <th>Faculty Name</th>
                 <th>Period</th>
-                <th>Target</th>
-                <th>Actual</th>
-                <th>Achievement</th>
-                <th>Status</th>
+                <th>Publications</th>
+                <th>Trainings</th>
+                <th>Presentations</th>
+                <th>KPI Score</th>
+                <th>Performance</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <?php if (empty($entries)): ?>
                 <tr class="empty-state">
-                  <td colspan="7">
+                  <td colspan="8">
                     <div class="empty-content">
                       <i class="fas fa-bullseye"></i>
                       <h3>No KPI records found</h3>
@@ -369,37 +373,41 @@ if (isset($_GET['edit'])) {
               <?php else: ?>
                 <?php foreach ($entries as $i => $entry): ?>
                 <tr data-index="<?php echo $i; ?>">
-                  <td data-label="KPI Name">
+                  <td data-label="Faculty Name">
                     <div class="kpi-name">
-                      <strong><?php echo htmlspecialchars($entry[0]); ?></strong>
+                      <strong><?php echo htmlspecialchars($entry[0] ?? ''); ?></strong>
                     </div>
                   </td>
                   <td data-label="Period">
-                    <span class="period-info"><?php echo htmlspecialchars($entry[1]); ?></span>
+                    <span class="period-info"><?php echo htmlspecialchars($entry[1] ?? ''); ?></span>
                   </td>
-                  <td data-label="Target">
-                    <span class="target-value"><?php echo htmlspecialchars($entry[2]); ?></span>
+                  <td data-label="Publications">
+                    <span class="target-value"><?php echo htmlspecialchars($entry[2] ?? ''); ?></span>
                   </td>
-                  <td data-label="Actual">
-                    <span class="actual-value"><?php echo htmlspecialchars($entry[3]); ?></span>
+                  <td data-label="Trainings">
+                    <span class="actual-value"><?php echo htmlspecialchars($entry[3] ?? ''); ?></span>
                   </td>
-                  <td data-label="Achievement">
-                    <span class="achievement-percentage"><?php echo htmlspecialchars($entry[4]); ?></span>
+                  <td data-label="Presentations">
+                    <?php echo htmlspecialchars($entry[4] ?? ''); ?>
                   </td>
-                  <td data-label="Status">
-                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[5])); ?>">
-                      <?php echo htmlspecialchars($entry[5]); ?>
+                  <td data-label="KPI Score">
+                    <?php echo htmlspecialchars($entry[5] ?? ''); ?>
+                  </td>
+                  <td data-label="Performance">
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[6] ?? '')); ?>">
+                      <?php echo htmlspecialchars($entry[6] ?? ''); ?>
                     </span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
                       <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-kpi-name="<?php echo htmlspecialchars($entry[0]); ?>"
-                              data-period="<?php echo htmlspecialchars($entry[1]); ?>"
-                              data-target="<?php echo htmlspecialchars($entry[2]); ?>"
-                              data-actual="<?php echo htmlspecialchars($entry[3]); ?>"
-                              data-achievement="<?php echo htmlspecialchars($entry[4]); ?>"
-                              data-status="<?php echo htmlspecialchars($entry[5]); ?>">
+                              data-faculty-name="<?php echo htmlspecialchars($entry[0] ?? ''); ?>"
+                              data-period="<?php echo htmlspecialchars($entry[1] ?? ''); ?>"
+                              data-publications="<?php echo htmlspecialchars($entry[2] ?? ''); ?>"
+                              data-trainings="<?php echo htmlspecialchars($entry[3] ?? ''); ?>"
+                              data-presentations="<?php echo htmlspecialchars($entry[4] ?? ''); ?>"
+                              data-kpi-score="<?php echo htmlspecialchars($entry[5] ?? ''); ?>"
+                              data-performance="<?php echo htmlspecialchars($entry[6] ?? ''); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this KPI record?');">
@@ -438,33 +446,17 @@ if (isset($_GET['edit'])) {
       color: var(--text-primary);
     }
     
-    .achievement-percentage {
-      background: #f0f9ff;
-      color: #0369a1;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    
-    .status-on-track {
+    .status-excellent {
       background: #dcfce7;
       color: #166534;
     }
-    
-    .status-exceeded {
+    .status-good {
       background: #fef3c7;
       color: #92400e;
     }
-    
-    .status-behind-schedule {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-    
-    .status-at-risk {
-      background: #fef2f2;
-      color: #dc2626;
+    .status-outstanding {
+      background: #c7d2fe;
+      color: #1e40af;
     }
   </style>
 
@@ -527,20 +519,22 @@ if (isset($_GET['edit'])) {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
         const index = btn.dataset.index;
-        const kpiName = btn.dataset.kpiName;
+        const facultyName = btn.dataset.facultyName;
         const period = btn.dataset.period;
-        const target = btn.dataset.target;
-        const actual = btn.dataset.actual;
-        const achievement = btn.dataset.achievement;
-        const status = btn.dataset.status;
+        const publications = btn.dataset.publications;
+        const trainings = btn.dataset.trainings;
+        const presentations = btn.dataset.presentations;
+        const kpiScore = btn.dataset.kpiScore;
+        const performance = btn.dataset.performance;
 
         document.getElementById('editIndex').value = index;
-        document.getElementById('editKpiName').value = kpiName;
+        document.getElementById('editFacultyName').value = facultyName;
         document.getElementById('editPeriod').value = period;
-        document.getElementById('editTarget').value = target;
-        document.getElementById('editActual').value = actual;
-        document.getElementById('editAchievement').value = achievement;
-        document.getElementById('editStatus').value = status;
+        document.getElementById('editPublications').value = publications;
+        document.getElementById('editTrainings').value = trainings;
+        document.getElementById('editPresentations').value = presentations;
+        document.getElementById('editKpiScore').value = kpiScore;
+        document.getElementById('editPerformance').value = performance;
 
         openModal(editModal);
       }

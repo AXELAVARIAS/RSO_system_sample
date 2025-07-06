@@ -15,7 +15,12 @@ $publications_count = 0;
 $pub_file = __DIR__ . '/php/publication_presentation.csv';
 if (file_exists($pub_file)) {
     $file = fopen($pub_file, 'r');
+    $is_first_row = true;
     while (($row = fgetcsv($file)) !== false) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // Skip header
+        }
         if (!empty($row) && !empty(array_filter($row))) {
             $publications_count++;
         }
@@ -283,14 +288,7 @@ $max_activities = max($activity_by_month) ?: 1;
           <p>Welcome back, <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>! Here's your research overview.</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary">
-            <i class="fa-solid fa-download"></i>
-            Export Report
-          </button>
-          <button class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i>
-            Quick Add
-          </button>
+          <!-- Export Report and Quick Add buttons removed -->
         </div>
       </div>
 

@@ -50,12 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date = $_POST['date'] ?? '';
         $author = $_POST['author'] ?? '';
         $title = $_POST['title'] ?? '';
-        $journal = $_POST['journal'] ?? '';
-        $doi = $_POST['doi'] ?? '';
-        $impact_factor = $_POST['impact_factor'] ?? '';
-        $citations = $_POST['citations'] ?? '';
-        if ($date && $author && $title && $journal && $doi && $impact_factor && $citations) {
-            $entries[$index] = [$date, $author, $title, $journal, $doi, $impact_factor, $citations];
+        $department = $_POST['department'] ?? '';
+        $subsidy = $_POST['subsidy'] ?? '';
+        $status = $_POST['status'] ?? '';
+        $local_international = $_POST['local_international'] ?? '';
+        if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
+            $entries[$index] = [$date, $author, $title, $department, $subsidy, $status, $local_international];
             $fp = fopen($data_file, 'w');
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
@@ -69,12 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date = $_POST['date'] ?? '';
     $author = $_POST['author'] ?? '';
     $title = $_POST['title'] ?? '';
-    $journal = $_POST['journal'] ?? '';
-    $doi = $_POST['doi'] ?? '';
-    $impact_factor = $_POST['impact_factor'] ?? '';
-    $citations = $_POST['citations'] ?? '';
-    if ($date && $author && $title && $journal && $doi && $impact_factor && $citations) {
-        $entry = [$date, $author, $title, $journal, $doi, $impact_factor, $citations];
+    $department = $_POST['department'] ?? '';
+    $subsidy = $_POST['subsidy'] ?? '';
+    $status = $_POST['status'] ?? '';
+    $local_international = $_POST['local_international'] ?? '';
+    if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
+        $entry = [$date, $author, $title, $department, $subsidy, $status, $local_international];
         $fp = fopen($data_file, 'a');
         fputcsv($fp, $entry);
         fclose($fp);
@@ -85,16 +85,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Predefined entries
 $default_entries = [
-    ['2025-01-15', 'Dr. Sarah Johnson', 'Machine Learning Applications in Healthcare', 'Journal of Medical Informatics', '10.1000/abc123', '3.45', '25'],
-    ['2025-02-20', 'Prof. Michael Chen', 'Sustainable Energy Systems in Urban Planning', 'Environmental Engineering Review', '10.1000/def456', '2.78', '18'],
-    ['2025-03-10', 'Dr. Emily Rodriguez', 'Educational Technology Impact on Student Learning', 'Educational Technology Research', '10.1000/ghi789', '4.12', '32'],
+    ['2025-01-15', 'Dr. Sarah Johnson', 'AI in Healthcare', 'Health Sciences', 'Yes', 'Published', 'International'],
+    ['2025-02-20', 'Prof. Michael Chen', 'Urban Energy Systems', 'Engineering', 'No', 'Under Review', 'Local'],
+    ['2025-03-10', 'Dr. Emily Rodriguez', 'EdTech Impact', 'Education', 'Yes', 'Accepted', 'International'],
 ];
 
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
+    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
+        if ($is_first_row) {
+            $is_first_row = false;
+            continue; // Skip header row
+        }
         $entries[] = $row;
     }
     fclose($fp);
@@ -240,32 +245,32 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="">
             <div class="form-group">
-              <label for="date">Publication Date</label>
+              <label for="date">Date OF Application</label>
               <input type="date" id="date" name="date" required>
             </div>
             <div class="form-group">
-              <label for="author">Author</label>
-              <input type="text" id="author" name="author" required placeholder="Enter author name">
+              <label for="author">Name(s) of faculty/research worker</label>
+              <input type="text" id="author" name="author" required placeholder="Enter name(s)">
             </div>
             <div class="form-group">
-              <label for="title">Publication Title</label>
-              <input type="text" id="title" name="title" required placeholder="Enter publication title">
+              <label for="title">Title of Paper</label>
+              <input type="text" id="title" name="title" required placeholder="Enter title of paper">
             </div>
             <div class="form-group">
-              <label for="journal">Journal/Conference</label>
-              <input type="text" id="journal" name="journal" required placeholder="Enter journal or conference name">
+              <label for="department">Department</label>
+              <input type="text" id="department" name="department" required placeholder="Enter department">
             </div>
             <div class="form-group">
-              <label for="doi">DOI</label>
-              <input type="text" id="doi" name="doi" required placeholder="Enter DOI">
+              <label for="subsidy">Research Subsidy</label>
+              <input type="text" id="subsidy" name="subsidy" required placeholder="Enter research subsidy">
             </div>
             <div class="form-group">
-              <label for="impact_factor">Impact Factor</label>
-              <input type="number" id="impact_factor" name="impact_factor" step="0.01" required placeholder="Enter impact factor">
+              <label for="status">Status</label>
+              <input type="text" id="status" name="status" required placeholder="Enter status">
             </div>
             <div class="form-group">
-              <label for="citations">Citations</label>
-              <input type="number" id="citations" name="citations" required placeholder="Enter number of citations">
+              <label for="local_international">Local/International</label>
+              <input type="text" id="local_international" name="local_international" required placeholder="Enter Local or International">
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
@@ -288,32 +293,32 @@ if (isset($_GET['edit'])) {
             <input type="hidden" name="save_edit" value="1">
             <input type="hidden" name="index" id="editIndex">
             <div class="form-group">
-              <label for="editDate">Publication Date</label>
+              <label for="editDate">Date OF Application</label>
               <input type="date" id="editDate" name="date" required>
             </div>
             <div class="form-group">
-              <label for="editAuthor">Author</label>
+              <label for="editAuthor">Name(s) of faculty/research worker</label>
               <input type="text" id="editAuthor" name="author" required>
             </div>
             <div class="form-group">
-              <label for="editTitle">Publication Title</label>
+              <label for="editTitle">Title of Paper</label>
               <input type="text" id="editTitle" name="title" required>
             </div>
             <div class="form-group">
-              <label for="editJournal">Journal/Conference</label>
-              <input type="text" id="editJournal" name="journal" required>
+              <label for="editDepartment">Department</label>
+              <input type="text" id="editDepartment" name="department" required>
             </div>
             <div class="form-group">
-              <label for="editDoi">DOI</label>
-              <input type="text" id="editDoi" name="doi" required>
+              <label for="editSubsidy">Research Subsidy</label>
+              <input type="text" id="editSubsidy" name="subsidy" required>
             </div>
             <div class="form-group">
-              <label for="editImpactFactor">Impact Factor</label>
-              <input type="number" id="editImpactFactor" name="impact_factor" step="0.01" required>
+              <label for="editStatus">Status</label>
+              <input type="text" id="editStatus" name="status" required>
             </div>
             <div class="form-group">
-              <label for="editCitations">Citations</label>
-              <input type="number" id="editCitations" name="citations" required>
+              <label for="editLocalInternational">Local/International</label>
+              <input type="text" id="editLocalInternational" name="local_international" required>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
@@ -340,13 +345,13 @@ if (isset($_GET['edit'])) {
           <table class="data-table" id="publicationsTable">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Author</th>
-                <th>Title</th>
-                <th>Journal/Conference</th>
-                <th>DOI</th>
-                <th>Impact Factor</th>
-                <th>Citations</th>
+                <th>Date OF Application</th>
+                <th>Name(s) of faculty/research worker</th>
+                <th>Title of Paper</th>
+                <th>Department</th>
+                <th>Research Subsidy</th>
+                <th>Status</th>
+                <th>Local/International</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -368,41 +373,41 @@ if (isset($_GET['edit'])) {
               <?php else: ?>
                 <?php foreach ($entries as $i => $entry): ?>
                 <tr data-index="<?php echo $i; ?>">
-                  <td data-label="Date">
-                    <span class="date-info"><?php echo htmlspecialchars($entry[0]); ?></span>
+                  <td data-label="Date OF Application">
+                    <span class="date-info"><?php echo htmlspecialchars($entry[0] ?? ''); ?></span>
                   </td>
-                  <td data-label="Author">
+                  <td data-label="Name(s) of faculty/research worker">
                     <div class="author-info">
-                      <strong><?php echo htmlspecialchars($entry[1]); ?></strong>
+                      <strong><?php echo htmlspecialchars($entry[1] ?? ''); ?></strong>
                     </div>
                   </td>
-                  <td data-label="Title">
+                  <td data-label="Title of Paper">
                     <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry[2]); ?></h4>
+                      <h4><?php echo htmlspecialchars($entry[2] ?? ''); ?></h4>
                     </div>
                   </td>
-                  <td data-label="Journal/Conference">
-                    <span class="journal-info"><?php echo htmlspecialchars($entry[3]); ?></span>
+                  <td data-label="Department">
+                    <span class="journal-info"><?php echo htmlspecialchars($entry[3] ?? ''); ?></span>
                   </td>
-                  <td data-label="DOI">
-                    <span class="doi-info"><?php echo htmlspecialchars($entry[4]); ?></span>
+                  <td data-label="Research Subsidy">
+                    <span class="impact-factor"><?php echo htmlspecialchars($entry[4] ?? ''); ?></span>
                   </td>
-                  <td data-label="Impact Factor">
-                    <span class="impact-factor"><?php echo htmlspecialchars($entry[5]); ?></span>
+                  <td data-label="Status">
+                    <span class="citations-count"><?php echo htmlspecialchars($entry[5] ?? ''); ?></span>
                   </td>
-                  <td data-label="Citations">
-                    <span class="citations-count"><?php echo htmlspecialchars($entry[6]); ?></span>
+                  <td data-label="Local/International">
+                    <span class="citations-count"><?php echo htmlspecialchars($entry[6] ?? ''); ?></span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
                       <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-date="<?php echo htmlspecialchars($entry[0]); ?>"
-                              data-author="<?php echo htmlspecialchars($entry[1]); ?>"
-                              data-title="<?php echo htmlspecialchars($entry[2]); ?>"
-                              data-journal="<?php echo htmlspecialchars($entry[3]); ?>"
-                              data-doi="<?php echo htmlspecialchars($entry[4]); ?>"
-                              data-impact-factor="<?php echo htmlspecialchars($entry[5]); ?>"
-                              data-citations="<?php echo htmlspecialchars($entry[6]); ?>">
+                              data-date="<?php echo htmlspecialchars($entry[0] ?? ''); ?>"
+                              data-author="<?php echo htmlspecialchars($entry[1] ?? ''); ?>"
+                              data-title="<?php echo htmlspecialchars($entry[2] ?? ''); ?>"
+                              data-department="<?php echo htmlspecialchars($entry[3] ?? ''); ?>"
+                              data-subsidy="<?php echo htmlspecialchars($entry[4] ?? ''); ?>"
+                              data-status="<?php echo htmlspecialchars($entry[5] ?? ''); ?>"
+                              data-local-international="<?php echo htmlspecialchars($entry[6] ?? ''); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
@@ -447,31 +452,24 @@ if (isset($_GET['edit'])) {
       font-size: 0.875rem;
     }
     
-    .doi-info {
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-      font-size: 0.75rem;
-      color: #0369a1;
-      background: #f0f9ff;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    
     .impact-factor {
-      background: #fef3c7;
-      color: #92400e;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      /* Remove background and color styling for plain text */
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+      font-weight: inherit;
     }
     
     .citations-count {
-      background: #dcfce7;
-      color: #166534;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      /* Remove background and color styling for plain text */
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+      font-weight: inherit;
     }
   </style>
 
@@ -537,19 +535,19 @@ if (isset($_GET['edit'])) {
         const date = btn.dataset.date;
         const author = btn.dataset.author;
         const title = btn.dataset.title;
-        const journal = btn.dataset.journal;
-        const doi = btn.dataset.doi;
-        const impactFactor = btn.dataset.impactFactor;
-        const citations = btn.dataset.citations;
+        const department = btn.dataset.department;
+        const subsidy = btn.dataset.subsidy;
+        const status = btn.dataset.status;
+        const localInternational = btn.dataset.localInternational || btn.dataset['local-international'];
 
         document.getElementById('editIndex').value = index;
         document.getElementById('editDate').value = date;
         document.getElementById('editAuthor').value = author;
         document.getElementById('editTitle').value = title;
-        document.getElementById('editJournal').value = journal;
-        document.getElementById('editDoi').value = doi;
-        document.getElementById('editImpactFactor').value = impactFactor;
-        document.getElementById('editCitations').value = citations;
+        document.getElementById('editDepartment').value = department;
+        document.getElementById('editSubsidy').value = subsidy;
+        document.getElementById('editStatus').value = status;
+        document.getElementById('editLocalInternational').value = localInternational;
 
         openModal(editModal);
       }
