@@ -13,7 +13,6 @@ if (empty($_SESSION['admin_logged_in'])) {
 }
 // manage_faculty.php - Admin management of faculty accounts
 $users_file = 'users.csv';
-$delete_message = '';
 
 // Handle delete request
 if (isset($_GET['delete']) && !empty($_GET['delete'])) {
@@ -35,7 +34,6 @@ if (isset($_GET['delete']) && !empty($_GET['delete'])) {
             fputcsv($file, $row);
         }
         fclose($file);
-        $delete_message = $deleted ? 'Faculty account deleted.' : 'Account not found.';
     }
 }
 
@@ -59,7 +57,6 @@ if (isset($_GET['delete_rso']) && !empty($_GET['delete_rso'])) {
             fputcsv($file, $row);
         }
         fclose($file);
-        $delete_message = $deleted ? 'RSO account deleted.' : 'Account not found.';
     }
 }
 
@@ -187,10 +184,17 @@ if (isset($_POST['save_kpi_edit']) && isset($_POST['kpi_index'])) {
 // --- Ethics Reviewed Protocols Management ---
 $ethics_file = 'ethics_reviewed_protocols.csv';
 $ethics_entries = [];
+$ethics_header = null;
 if (file_exists($ethics_file)) {
     $fp = fopen($ethics_file, 'r');
+    $first_row = true;
     while ($row = fgetcsv($fp)) {
-        $ethics_entries[] = $row;
+        if ($first_row) {
+            $ethics_header = $row; // Store header separately
+            $first_row = false;
+        } else {
+            $ethics_entries[] = $row; // Only store data rows
+        }
     }
     fclose($fp);
 }
@@ -201,6 +205,11 @@ if (isset($_POST['delete_ethics']) && isset($_POST['ethics_index'])) {
     if (isset($ethics_entries[$index])) {
         array_splice($ethics_entries, $index, 1);
         $fp = fopen($ethics_file, 'w');
+        // Write header first
+        if ($ethics_header) {
+            fputcsv($fp, $ethics_header);
+        }
+        // Write data rows
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -219,6 +228,11 @@ if (isset($_POST['save_ethics_edit']) && isset($_POST['ethics_index'])) {
     if ($no && $title && $department && $status && $action) {
         $ethics_entries[$index] = [$no, $title, $department, $status, $action];
         $fp = fopen($ethics_file, 'w');
+        // Write header first
+        if ($ethics_header) {
+            fputcsv($fp, $ethics_header);
+        }
+        // Write data rows
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -823,9 +837,6 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             <div class="card-custom" id="faculty-accounts">
                 <div class="card-header"><i class="fa fa-users me-2"></i>Faculty Accounts</div>
                 <div class="card-body">
-                    <?php if ($delete_message): ?>
-                        <div class="alert alert-success text-center"> <?php echo htmlspecialchars($delete_message); ?> </div>
-                    <?php endif; ?>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover align-middle">
                             <thead>

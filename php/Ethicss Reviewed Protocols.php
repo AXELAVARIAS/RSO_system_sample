@@ -16,20 +16,20 @@ $data_file = __DIR__ . '/ethics_reviewed_protocols.csv';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle delete
     if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
+        $all_rows = [];
         if (file_exists($data_file)) {
             $fp = fopen($data_file, 'r');
             while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
+                $all_rows[] = $row;
             }
             fclose($fp);
         }
-        $index = (int)$_POST['index'];
-        if (isset($entries[$index])) {
-            array_splice($entries, $index, 1);
+        $index = (int)$_POST['index'] + 1; // +1 to skip header
+        if (isset($all_rows[$index])) {
+            array_splice($all_rows, $index, 1);
             $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+            foreach ($all_rows as $row) {
+                fputcsv($fp, $row);
             }
             fclose($fp);
         }
