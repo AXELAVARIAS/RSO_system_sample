@@ -82,8 +82,10 @@ if (file_exists($ethics_file)) {
             // Defensive: check if columns exist
             $title = isset($ethics[1]) ? $ethics[1] : '';
             $meta = isset($ethics[2]) ? $ethics[2] : '';
+            // Use current date as fallback for missing date
+            $ethics_date = isset($ethics[0]) && !empty($ethics[0]) ? $ethics[0] : date('Y-m-d');
             $recent_updates[] = [
-                'date' => '',
+                'date' => $ethics_date,
                 'title' => $title,
                 'meta' => 'Ethics Protocol • ' . $meta,
                 'type' => 'Ethics Protocol',
@@ -371,7 +373,23 @@ $max_activities = max($activity_by_month) ?: 1;
               </div>
             <?php else: ?>
               <?php foreach ($recent_updates as $update): ?>
-              <div class="update-item">
+              <?php
+                // Determine link based on type
+                $type = $update['type'];
+                $title_param = urlencode($update['title']);
+                if ($type === 'Publication') {
+                  $link = "php/Publication and Presentation.php?title=$title_param";
+                } elseif ($type === 'Research Activity') {
+                  $link = "php/Research  Capacity Buildings Activities.php?title=$title_param";
+                } elseif ($type === 'Ethics Protocol') {
+                  $link = "php/Ethicss Reviewed Protocols.php?title=$title_param";
+                } elseif ($type === 'KPI') {
+                  $link = "php/KPI records.php?title=$title_param";
+                } else {
+                  $link = '#';
+                }
+              ?>
+              <a href="<?php echo $link; ?>" class="update-item update-link" style="text-decoration:none;color:inherit;">
                 <div class="update-icon">
                   <?php if ($update['type'] === 'Publication'): ?>
                     <i class="fa-solid fa-book"></i>
@@ -390,7 +408,7 @@ $max_activities = max($activity_by_month) ?: 1;
                     <div class="update-date"><?php echo htmlspecialchars($update['date']); ?></div>
                   <?php endif; ?>
                 </div>
-              </div>
+              </a>
               <?php endforeach; ?>
             <?php endif; ?>
           </div>
@@ -444,6 +462,48 @@ $max_activities = max($activity_by_month) ?: 1;
     .updates-list {
       max-height: 400px;
       overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--btn-primary-bg) var(--bg-secondary);
+    }
+    
+    /* Custom Webkit Scrollbar for Recent Updates */
+    .updates-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .updates-list::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      margin: 4px 0;
+    }
+    
+    .updates-list::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--btn-primary-bg) 0%, var(--btn-primary-hover) 100%);
+      border-radius: 10px;
+      border: 2px solid var(--bg-secondary);
+      transition: all 0.3s ease;
+    }
+    
+    .updates-list::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, var(--btn-primary-hover) 0%, var(--btn-primary-bg) 100%);
+      transform: scaleX(1.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .updates-list::-webkit-scrollbar-corner {
+      background: var(--bg-secondary);
+    }
+    
+    /* Scrollbar animation on scroll */
+    .updates-list::-webkit-scrollbar-thumb:active {
+      background: var(--btn-primary-hover);
+      transform: scaleX(1.3);
+    }
+    
+    /* Firefox scrollbar styling */
+    .updates-list {
+      scrollbar-width: thin;
+      scrollbar-color: var(--btn-primary-bg) var(--bg-secondary);
     }
     
     .update-item {
@@ -544,6 +604,96 @@ $max_activities = max($activity_by_month) ?: 1;
           bar.style.transform = 'scaleY(1)';
         }, index * 100);
       });
+
+      // Enhanced scrollbar functionality for recent updates
+      const updatesList = document.querySelector('.updates-list');
+      if (updatesList) {
+        // Add smooth scrolling
+        updatesList.style.scrollBehavior = 'smooth';
+        
+        // Add scroll indicator
+        const scrollIndicator = document.createElement('div');
+        scrollIndicator.className = 'scroll-indicator';
+        scrollIndicator.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+        scrollIndicator.style.cssText = `
+          position: absolute;
+          bottom: 10px;
+          right: 10px;
+          width: 30px;
+          height: 30px;
+          background: var(--btn-primary-bg);
+          color: var(--text-inverse);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          opacity: 0;
+          transform: scale(0);
+          transition: all 0.3s ease;
+          z-index: 10;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        `;
+        
+        updatesList.parentElement.style.position = 'relative';
+        updatesList.parentElement.appendChild(scrollIndicator);
+        
+        // Show/hide scroll indicator based on scroll position
+        updatesList.addEventListener('scroll', () => {
+          const isAtBottom = updatesList.scrollTop + updatesList.clientHeight >= updatesList.scrollHeight - 10;
+          const isAtTop = updatesList.scrollTop <= 10;
+          
+          if (!isAtBottom && updatesList.scrollHeight > updatesList.clientHeight) {
+            scrollIndicator.style.opacity = '1';
+            scrollIndicator.style.transform = 'scale(1)';
+            scrollIndicator.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+          } else if (isAtBottom) {
+            scrollIndicator.style.opacity = '0.7';
+            scrollIndicator.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
+          } else {
+            scrollIndicator.style.opacity = '0';
+            scrollIndicator.style.transform = 'scale(0)';
+          }
+        });
+        
+        // Scroll indicator click functionality
+        scrollIndicator.addEventListener('click', () => {
+          const isAtBottom = updatesList.scrollTop + updatesList.clientHeight >= updatesList.scrollHeight - 10;
+          
+          if (isAtBottom) {
+            // Scroll to top
+            updatesList.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+          } else {
+            // Scroll to bottom
+            updatesList.scrollTo({
+              top: updatesList.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
+        });
+        
+        // Add hover effect to scroll indicator
+        scrollIndicator.addEventListener('mouseenter', () => {
+          scrollIndicator.style.transform = 'scale(1.1)';
+          scrollIndicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
+        });
+        
+        scrollIndicator.addEventListener('mouseleave', () => {
+          scrollIndicator.style.transform = 'scale(1)';
+          scrollIndicator.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+        });
+        
+        // Initialize scroll indicator visibility
+        setTimeout(() => {
+          if (updatesList.scrollHeight > updatesList.clientHeight) {
+            scrollIndicator.style.opacity = '1';
+            scrollIndicator.style.transform = 'scale(1)';
+          }
+        }, 500);
+      }
     });
   </script>
 </body>
