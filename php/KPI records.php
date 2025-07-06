@@ -150,7 +150,7 @@ if (isset($_GET['edit'])) {
           <span>Publications</span>
         </a>
         <a href="KPI records.php" class="nav-link active">
-          <i class="fas fa-target"></i>
+          <i class="fas fa-bullseye"></i>
           <span>KPI Records</span>
         </a>
       </nav>
@@ -329,7 +329,7 @@ if (isset($_GET['edit'])) {
       <div class="data-card">
         <div class="card-header">
           <div class="card-title">
-            <i class="fas fa-target"></i>
+            <i class="fas fa-bullseye"></i>
             <h2>KPI Records Overview</h2>
           </div>
           <div class="search-container">
@@ -356,7 +356,7 @@ if (isset($_GET['edit'])) {
                 <tr class="empty-state">
                   <td colspan="7">
                     <div class="empty-content">
-                      <i class="fas fa-target"></i>
+                      <i class="fas fa-bullseye"></i>
                       <h3>No KPI records found</h3>
                       <p>Add your first KPI record to get started</p>
                       <button class="btn btn-primary" id="addFirstBtn">

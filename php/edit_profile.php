@@ -317,7 +317,7 @@ $current_email = $_SESSION['user_email'] ?? '';
                     <span>Publications</span>
                 </a>
                 <a href="KPI records.php" class="nav-link">
-                    <i class="fas fa-target"></i>
+                    <i class="fas fa-bullseye"></i>
                     <span>KPI Records</span>
                 </a>
                   </nav>
