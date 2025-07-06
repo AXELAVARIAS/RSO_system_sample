@@ -1,0 +1,163 @@
+/* Theme System for RSO Research Management System */
+
+/* CSS Variables for Light Theme (Default) */
+:root {
+  /* Colors */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --bg-modal: #ffffff;
+  --bg-dropdown: #ffffff;
+  
+  /* Text Colors */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+  --text-dashboard-title: #1e293b;
+  --text-dashboard-subtitle: #64748b;
+  
+  /* Border Colors */
+  --border-primary: #e2e8f0;
+  --border-secondary: #f1f5f9;
+  --border-focus: #3b82f6;
+  
+  /* Shadow */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  
+  /* Status Colors */
+  --status-approved: #10b981;
+  --status-pending: #f59e0b;
+  --status-under-review: #3b82f6;
+  --status-rejected: #ef4444;
+  --status-draft: #6b7280;
+  
+  /* Button Colors */
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --btn-secondary-bg: #f8fafc;
+  --btn-secondary-hover: #f1f5f9;
+  --btn-success-bg: #10b981;
+  --btn-success-hover: #059669;
+  --btn-danger-bg: #ef4444;
+  --btn-danger-hover: #dc2626;
+  --btn-warning-bg: #f59e0b;
+  --btn-warning-hover: #d97706;
+  
+  /* Input Colors */
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --input-focus-border: #3b82f6;
+  --input-placeholder: #9ca3af;
+}
+
+/* CSS Variables for Dark Theme */
+[data-theme="dark"] {
+  /* Colors */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-header: #1e293b;
+  --bg-modal: #1e293b;
+  --bg-dropdown: #1e293b;
+  
+  /* Text Colors */
+  --text-primary: #fff;
+  --text-secondary: #e5e7eb;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0f172a;
+  --text-dashboard-title: #ffffff;
+  --text-dashboard-subtitle: #f1f5f9;
+  
+  /* Border Colors */
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --border-focus: #60a5fa;
+  
+  /* Shadow */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  
+  /* Status Colors (adjusted for dark theme) */
+  --status-approved: #34d399;
+  --status-pending: #fbbf24;
+  --status-under-review: #60a5fa;
+  --status-rejected: #f87171;
+  --status-draft: #9ca3af;
+  
+  /* Button Colors (adjusted for dark theme) */
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-hover: #60a5fa;
+  --btn-secondary-bg: #334155;
+  --btn-secondary-hover: #475569;
+  --btn-success-bg: #10b981;
+  --btn-success-hover: #34d399;
+  --btn-danger-bg: #ef4444;
+  --btn-danger-hover: #f87171;
+  --btn-warning-bg: #f59e0b;
+  --btn-warning-hover: #fbbf24;
+  
+  /* Input Colors */
+  --input-bg: #334155;
+  --input-border: #475569;
+  --input-focus-border: #60a5fa;
+  --input-placeholder: #64748b;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-secondary);
+}
+
+.theme-toggle i {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.theme-toggle:hover i {
+  color: var(--text-primary);
+}
+
+/* Theme transition for smooth switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Ensure smooth transitions for specific elements */
+body,
+.header,
+.modal,
+.profile-dropdown,
+.data-card,
+.btn,
+input,
+select,
+textarea {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+} 

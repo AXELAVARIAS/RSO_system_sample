@@ -5,8 +5,14 @@
     <title>Login page Research Management System</title>
     <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" title="Toggle Theme" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <i class="fas fa-moon"></i>
+  </button>
+  
     <a href="../index.html" class="back-btn">Back to Dashboard</a>
     <div class="login-container">
         <div class="logo">
@@ -62,5 +68,6 @@
             window.location.href = 'index.html';
         }
     </script>
+    <script src="../js/theme.js"></script>
 </body>
 </html>

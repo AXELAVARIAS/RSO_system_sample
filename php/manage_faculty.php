@@ -92,12 +92,7 @@ $dct_file = 'data_collection_tools.csv';
 $dct_entries = [];
 if (file_exists($dct_file)) {
     $fp = fopen($dct_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $dct_entries[] = $row;
     }
     fclose($fp);
@@ -109,7 +104,6 @@ if (isset($_POST['delete_dct']) && isset($_POST['dct_index'])) {
     if (isset($dct_entries[$index])) {
         array_splice($dct_entries, $index, 1);
         $fp = fopen($dct_file, 'w');
-        fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
         foreach ($dct_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -133,7 +127,6 @@ if (isset($_POST['save_dct_edit']) && isset($_POST['dct_index'])) {
     if ($faculty_name && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
         $dct_entries[$index] = [$faculty_name, $degree, $sex, $title, $ownership, $presented, $published, $journal];
         $fp = fopen($dct_file, 'w');
-        fputcsv($fp, ['Name of Faculty', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Date & Venue Presented', 'Date Published', 'Journal Published']);
         foreach ($dct_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -150,12 +143,7 @@ $kpi_file = 'kpi_records.csv';
 $kpi_entries = [];
 if (file_exists($kpi_file)) {
     $fp = fopen($kpi_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $kpi_entries[] = $row;
     }
     fclose($fp);
@@ -167,7 +155,6 @@ if (isset($_POST['delete_kpi']) && isset($_POST['kpi_index'])) {
     if (isset($kpi_entries[$index])) {
         array_splice($kpi_entries, $index, 1);
         $fp = fopen($kpi_file, 'w');
-        fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
         foreach ($kpi_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -188,7 +175,6 @@ if (isset($_POST['save_kpi_edit']) && isset($_POST['kpi_index'])) {
     if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
         $kpi_entries[$index] = [$faculty, $period, $publications, $trainings, $presentations, $score, $performance];
         $fp = fopen($kpi_file, 'w');
-        fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
         foreach ($kpi_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -203,12 +189,7 @@ $ethics_file = 'ethics_reviewed_protocols.csv';
 $ethics_entries = [];
 if (file_exists($ethics_file)) {
     $fp = fopen($ethics_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $ethics_entries[] = $row;
     }
     fclose($fp);
@@ -220,7 +201,6 @@ if (isset($_POST['delete_ethics']) && isset($_POST['ethics_index'])) {
     if (isset($ethics_entries[$index])) {
         array_splice($ethics_entries, $index, 1);
         $fp = fopen($ethics_file, 'w');
-        fputcsv($fp, ['No.', 'Title', 'Department', 'Status', 'Action']);
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -239,7 +219,6 @@ if (isset($_POST['save_ethics_edit']) && isset($_POST['ethics_index'])) {
     if ($no && $title && $department && $status && $action) {
         $ethics_entries[$index] = [$no, $title, $department, $status, $action];
         $fp = fopen($ethics_file, 'w');
-        fputcsv($fp, ['No.', 'Title', 'Department', 'Status', 'Action']);
         foreach ($ethics_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -254,12 +233,7 @@ $pub_file = 'publication_presentation.csv';
 $pub_entries = [];
 if (file_exists($pub_file)) {
     $fp = fopen($pub_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $pub_entries[] = $row;
     }
     fclose($fp);
@@ -271,7 +245,6 @@ if (isset($_POST['delete_pub']) && isset($_POST['pub_index'])) {
     if (isset($pub_entries[$index])) {
         array_splice($pub_entries, $index, 1);
         $fp = fopen($pub_file, 'w');
-        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
         foreach ($pub_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -292,7 +265,6 @@ if (isset($_POST['save_pub_edit']) && isset($_POST['pub_index'])) {
     if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
         $pub_entries[$index] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
         $fp = fopen($pub_file, 'w');
-        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
         foreach ($pub_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -307,12 +279,7 @@ $rcb_file = 'research_capacity_data.csv';
 $rcb_entries = [];
 if (file_exists($rcb_file)) {
     $fp = fopen($rcb_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $rcb_entries[] = $row;
     }
     fclose($fp);
@@ -324,7 +291,6 @@ if (isset($_POST['delete_rcb']) && isset($_POST['rcb_index'])) {
     if (isset($rcb_entries[$index])) {
         array_splice($rcb_entries, $index, 1);
         $fp = fopen($rcb_file, 'w');
-        fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
         foreach ($rcb_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -344,7 +310,6 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
     if ($date && $name && $venue && $facilitators && $num_participants && $status) {
         $rcb_entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
         $fp = fopen($rcb_file, 'w');
-        fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
         foreach ($rcb_entries as $entry) {
             fputcsv($fp, $entry);
         }
@@ -362,10 +327,12 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme.css">
     <style>
         body {
-            background: #f4f7fa;
+            background: var(--bg-primary);
             font-family: 'Segoe UI', Arial, sans-serif;
+            color: var(--text-primary);
         }
         .custom-sidebar {
             width: 230px;
@@ -413,8 +380,8 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         .custom-topbar {
             margin-left: 230px;
             height: 64px;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(30,53,87,0.06);
+            background: var(--bg-header);
+            box-shadow: var(--shadow-sm);
             display: flex;
             align-items: center;
             padding: 0 32px;
@@ -425,7 +392,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         .custom-topbar .page-title {
             font-size: 1.3rem;
             font-weight: 600;
-            color: #22335a;
+            color: var(--text-primary);
         }
         .custom-topbar .search-bar {
             margin-left: auto;
@@ -473,8 +440,8 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         }
         .card-custom {
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(30,53,87,0.07);
-            background: #fff;
+            box-shadow: var(--shadow-md);
+            background: var(--bg-card);
             padding: 0;
         }
         .card-custom .card-header {
@@ -489,8 +456,8 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             padding: 24px;
         }
         .table thead th {
-            background: #f4f7fa;
-            color: #22335a;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             font-weight: 600;
         }
         .btn-custom {
@@ -704,6 +671,10 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="user-info ms-3">
             <span><?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'Admin'); ?></span>
         </div>
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" title="Toggle Theme" style="margin-left: 15px;">
+            <i class="fas fa-moon"></i>
+        </button>
     </div>
     <div class="dashboard-content">
         <div class="welcome-card">
@@ -1079,6 +1050,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             </div>
         </div>
     </div>
+    <script src="../js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

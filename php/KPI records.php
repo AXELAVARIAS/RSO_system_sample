@@ -14,27 +14,20 @@ $data_file = __DIR__ . '/kpi_records.csv';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Read all entries (skip header)
-    $entries = [];
-    if (file_exists($data_file)) {
-        $fp = fopen($data_file, 'r');
-        $is_first_row = true;
-        while ($row = fgetcsv($fp)) {
-            if ($is_first_row) {
-                $is_first_row = false;
-                continue; // skip header
-            }
-            $entries[] = $row;
-        }
-        fclose($fp);
-    }
     // Handle delete
     if (isset($_POST['delete']) && isset($_POST['index'])) {
+        $entries = [];
+        if (file_exists($data_file)) {
+            $fp = fopen($data_file, 'r');
+            while ($row = fgetcsv($fp)) {
+                $entries[] = $row;
+            }
+            fclose($fp);
+        }
         $index = (int)$_POST['index'];
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -45,18 +38,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Handle edit save
     if (isset($_POST['save_edit']) && isset($_POST['index'])) {
+        $entries = [];
+        if (file_exists($data_file)) {
+            $fp = fopen($data_file, 'r');
+            while ($row = fgetcsv($fp)) {
+                $entries[] = $row;
+            }
+            fclose($fp);
+        }
         $index = (int)$_POST['index'];
-        $faculty = $_POST['faculty'] ?? '';
+        $kpi_name = $_POST['kpi_name'] ?? '';
         $period = $_POST['period'] ?? '';
-        $publications = $_POST['publications'] ?? '';
-        $trainings = $_POST['trainings'] ?? '';
-        $presentations = $_POST['presentations'] ?? '';
-        $score = $_POST['score'] ?? '';
-        $performance = $_POST['performance'] ?? '';
-        if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
-            $entries[$index] = [$faculty, $period, $publications, $trainings, $presentations, $score, $performance];
+        $target = $_POST['target'] ?? '';
+        $actual = $_POST['actual'] ?? '';
+        $achievement = $_POST['achievement'] ?? '';
+        $status = $_POST['status'] ?? '';
+        if ($kpi_name && $period && $target && $actual && $achievement && $status) {
+            $entries[$index] = [$kpi_name, $period, $target, $actual, $achievement, $status];
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -66,20 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     // Handle add
-    $faculty = $_POST['faculty'] ?? '';
+    $kpi_name = $_POST['kpi_name'] ?? '';
     $period = $_POST['period'] ?? '';
-    $publications = $_POST['publications'] ?? '';
-    $trainings = $_POST['trainings'] ?? '';
-    $presentations = $_POST['presentations'] ?? '';
-    $score = $_POST['score'] ?? '';
-    $performance = $_POST['performance'] ?? '';
-    if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
-        $entries[] = [$faculty, $period, $publications, $trainings, $presentations, $score, $performance];
-        $fp = fopen($data_file, 'w');
-        fputcsv($fp, ['Faculty Name', 'Period', 'Publications', 'Trainings', 'Presentations', 'KPI Score', 'Performance']);
-        foreach ($entries as $entry) {
-            fputcsv($fp, $entry);
-        }
+    $target = $_POST['target'] ?? '';
+    $actual = $_POST['actual'] ?? '';
+    $achievement = $_POST['achievement'] ?? '';
+    $status = $_POST['status'] ?? '';
+    if ($kpi_name && $period && $target && $actual && $achievement && $status) {
+        $entry = [$kpi_name, $period, $target, $actual, $achievement, $status];
+        $fp = fopen($data_file, 'a');
+        fputcsv($fp, $entry);
         fclose($fp);
     }
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -88,22 +83,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Predefined entries
 $default_entries = [
-    ['Dr. Sarah Johnson', '2025 - Semester 1', '8', '5', '12', '9.2', 'Excellent'],
-    ['Prof. Michael Chen', '2025 - Semester 1', '6', '3', '8', '8.1', 'Very Good'],
-    ['Dr. Emily Rodriguez', '2025 - Semester 1', '4', '7', '6', '7.8', 'Good'],
-    ['Dr. James Wilson', '2025 - Semester 1', '5', '4', '9', '8.5', 'Very Good'],
+    ['Research Publications', 'Q1 2025', '15', '12', '80%', 'On Track'],
+    ['Research Funding', 'Q1 2025', '₱2,000,000', '₱1,850,000', '92.5%', 'Exceeded'],
+    ['Student Research Projects', 'Q1 2025', '25', '28', '112%', 'Exceeded'],
+    ['International Collaborations', 'Q1 2025', '8', '6', '75%', 'On Track'],
 ];
 
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $entries[] = $row;
     }
     fclose($fp);
@@ -123,245 +113,461 @@ if (isset($_GET['edit'])) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Faculty KPI Tracking</title>
+  <title>KPI Records</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/KPI records.css">
-  <style>
-    .edit-entry-form { background: #f1f1f1; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      z-index: 1000;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    body {
-      margin: 0;
-      padding-top: 80px;
-    }
-    .profile-menu {
-      position: fixed;
-      top: 18px;
-      right: 40px;
-      z-index: 1100;
-      display: flex;
-      align-items: center;
-    }
-    .profile-icon-btn {
-      background: #e9ecdf;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: background 0.2s;
-      font-size: 1.7rem;
-      padding: 0;
-    }
-    .profile-icon-btn:hover {
-      background: #d2d8c2;
-    }
-    .profile-dropdown {
-      display: none;
-      position: absolute;
-      top: 54px;
-      right: 0;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-      min-width: 240px;
-      padding: 16px 20px 12px 20px;
-      text-align: left;
-      animation: fadeIn 0.2s;
-      box-sizing: border-box;
-    }
-    .profile-menu.open .profile-dropdown {
-      display: block;
-    }
-    .profile-dropdown form {
-      margin: 0;
-      padding: 0 0;
-    }
-    .profile-dropdown button {
-      background: #b94a48;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 7px 18px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-top: 6px;
-      width: 100%;
-      text-align: center;
-      transition: background 0.2s;
-    }
-    .profile-dropdown button:hover {
-      background: #a94442;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/modern-theme.css">
+  <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-<div class="profile-menu" id="profileMenu">
-    <button class="profile-icon-btn" id="profileIconBtn" aria-label="Profile">
-      <!-- SVG user icon -->
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
-    </button>
-    <div class="profile-dropdown" id="profileDropdown">
-      <div style="font-weight: 600; margin-bottom: 4px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <div class="logo">
+        <img src="../pics/rso-bg.png" alt="UC Logo">
+        <span>UC RSO</span>
       </div>
-      <div style="font-size:0.9em; color:#6a7a5e; margin-bottom:2px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?>
+      <nav class="nav">
+        <a href="../index.php" class="nav-link">
+          <i class="fas fa-home"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="Research  Capacity Buildings Activities.php" class="nav-link">
+          <i class="fas fa-chart-line"></i>
+          <span>Research Capacity</span>
+        </a>
+        <a href="Data Collection Tools.php" class="nav-link">
+          <i class="fas fa-database"></i>
+          <span>Data Collection</span>
+        </a>
+        <a href="Ethicss Reviewed Protocols.php" class="nav-link">
+          <i class="fas fa-shield-alt"></i>
+          <span>Ethics Protocols</span>
+        </a>
+        <a href="Publication and Presentation.php" class="nav-link">
+          <i class="fas fa-book"></i>
+          <span>Publications</span>
+        </a>
+        <a href="KPI records.php" class="nav-link active">
+          <i class="fas fa-target"></i>
+          <span>KPI Records</span>
+        </a>
+      </nav>
+      
+      <!-- Theme Toggle -->
+      <button class="theme-toggle" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      
+      <!-- Profile Menu -->
+      <div class="profile-menu" id="profileMenu">
+        <button class="profile-btn" id="profileBtn">
+          <?php
+            $profile_picture = $_SESSION['profile_picture'] ?? '';
+            $profile_picture_path = '';
+            if (!empty($profile_picture)) {
+              if (strpos($profile_picture, '../') === 0) {
+                $full_path = __DIR__ . '/' . $profile_picture;
+                if (file_exists($full_path)) {
+                  $profile_picture_path = $profile_picture;
+                }
+              } else {
+                $profile_picture_path = $profile_picture;
+              }
+            }
+          ?>
+          <?php if ($profile_picture_path): ?>
+            <img src="<?php echo htmlspecialchars($profile_picture_path); ?>" alt="Profile" class="profile-img">
+          <?php else: ?>
+            <img src="../pics/rso-bg.png" alt="Profile" class="profile-img">
+          <?php endif; ?>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="profile-info">
+            <div class="profile-name"><?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?></div>
+            <div class="profile-role"><?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?></div>
+            <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
+          </div>
+          <div class="profile-actions">
+            <a href="edit_profile.php" class="profile-action">
+              <i class="fas fa-user-edit"></i>
+              Edit Profile
+            </a>
+            <form method="post" class="logout-form">
+              <button type="submit" name="logout" class="profile-action logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
-      <div style="font-size:0.85em; color:#9a9a8a; text-align: left;">
-        <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
-      </div>
-      <div style="border-top: 1px solid #eee; margin: 10px 0; padding-top: 10px; text-align: left;">
-        <a href="edit_profile.php" style="display: block; color: #6a7a5e; text-decoration: none; padding: 8px 0; font-size: 0.9em; text-align: left;">Edit Profile</a>
-      </div>
-      <form method="post">
-        <button type="submit" name="logout">Logout</button>
-      </form>
     </div>
-  </div>
-  <header>
-    <div class="logo">
-      <img src="../pics/rso-bg.png" alt="UC Logo">
-      UC RSO
-    </div>
-    <nav>
-      <a href="../index.php">Dashboard</a>
-      <a href="Research  Capacity Buildings Activities.php">Research Capacity Building</a>
-      <a href="Data Collection Tools.php">Data Collection Tools</a>
-      <a href="Ethicss Reviewed Protocols.php">Ethics Reviewed Protocols</a>
-      <a href="Publication and Presentation.php">Publications and Presentations</a>
-      <a href="KPI records.php" class="active">KPI Records</a>
-    </nav>
-    
   </header>
-  <div class="dashboard-bg">
+
+  <!-- Main Content -->
+  <main class="main">
     <div class="container">
-      <h1>Faculty KPI Tracking</h1>
-      <div class="subtitle">Monitor academic performance indicators and faculty achievements</div>
-      <div class="actions">
-        <button class="btn add" id="showAddForm">+ Add New Entry</button>
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-title">
+          <h1>KPI Records</h1>
+          <p>Track and manage Key Performance Indicators for research activities</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" id="uploadBtn">
+            <i class="fas fa-upload"></i>
+            Upload Excel
+          </button>
+          <button class="btn btn-primary" id="addBtn">
+            <i class="fas fa-plus"></i>
+            Add New KPI
+          </button>
+        </div>
       </div>
-      <form class="add-entry-form" id="addEntryForm" method="post" action="" style="display:none; background:#f9f9f9; padding:20px; border-radius:8px; margin-bottom:20px;">
-        <label>Faculty Name:<br><input type="text" name="faculty" required></label><br>
-        <label>Period:<br><input type="text" name="period" required></label><br>
-        <label>Publications:<br><input type="number" name="publications" min="0" required></label><br>
-        <label>Trainings:<br><input type="number" name="trainings" min="0" required></label><br>
-        <label>Presentations:<br><input type="number" name="presentations" min="0" required></label><br>
-        <label>KPI Score:<br><input type="number" name="score" min="0" max="10" step="0.1" required></label><br>
-        <label>Performance:<br>
-          <select name="performance" required>
-            <option value="Excellent">Excellent</option>
-            <option value="Very Good">Very Good</option>
-            <option value="Good">Good</option>
-            <option value="Satisfactory">Satisfactory</option>
-            <option value="Needs Improvement">Needs Improvement</option>
-          </select>
-        </label><br>
-        <button type="submit" class="btn">Add Entry</button>
-        <button type="button" class="btn" id="cancelAddForm">Cancel</button>
-      </form>
-      <div class="panel">
-        <h2>KPI Performance Overview</h2>
+
+      <!-- Add Entry Modal -->
+      <div class="modal" id="addModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Add New KPI Record</h3>
+            <button class="modal-close" id="closeAddModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="">
+            <div class="form-group">
+              <label for="kpi_name">KPI Name</label>
+              <input type="text" id="kpi_name" name="kpi_name" required placeholder="Enter KPI name">
+            </div>
+            <div class="form-group">
+              <label for="period">Period</label>
+              <input type="text" id="period" name="period" required placeholder="e.g., Q1 2025">
+            </div>
+            <div class="form-group">
+              <label for="target">Target</label>
+              <input type="text" id="target" name="target" required placeholder="Enter target value">
+            </div>
+            <div class="form-group">
+              <label for="actual">Actual</label>
+              <input type="text" id="actual" name="actual" required placeholder="Enter actual value">
+            </div>
+            <div class="form-group">
+              <label for="achievement">Achievement (%)</label>
+              <input type="text" id="achievement" name="achievement" required placeholder="Enter achievement percentage">
+            </div>
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status" name="status" required>
+                <option value="">Select status</option>
+                <option value="On Track">On Track</option>
+                <option value="Exceeded">Exceeded</option>
+                <option value="Behind Schedule">Behind Schedule</option>
+                <option value="At Risk">At Risk</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add KPI</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Entry Modal -->
+      <div class="modal" id="editModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit KPI Record</h3>
+            <button class="modal-close" id="closeEditModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="" id="editForm">
+            <input type="hidden" name="save_edit" value="1">
+            <input type="hidden" name="index" id="editIndex">
+            <div class="form-group">
+              <label for="editKpiName">KPI Name</label>
+              <input type="text" id="editKpiName" name="kpi_name" required>
+            </div>
+            <div class="form-group">
+              <label for="editPeriod">Period</label>
+              <input type="text" id="editPeriod" name="period" required>
+            </div>
+            <div class="form-group">
+              <label for="editTarget">Target</label>
+              <input type="text" id="editTarget" name="target" required>
+            </div>
+            <div class="form-group">
+              <label for="editActual">Actual</label>
+              <input type="text" id="editActual" name="actual" required>
+            </div>
+            <div class="form-group">
+              <label for="editAchievement">Achievement (%)</label>
+              <input type="text" id="editAchievement" name="achievement" required>
+            </div>
+            <div class="form-group">
+              <label for="editStatus">Status</label>
+              <select id="editStatus" name="status" required>
+                <option value="On Track">On Track</option>
+                <option value="Exceeded">Exceeded</option>
+                <option value="Behind Schedule">Behind Schedule</option>
+                <option value="At Risk">At Risk</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="data-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-target"></i>
+            <h2>KPI Records Overview</h2>
+          </div>
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search KPIs..." id="searchInput">
+          </div>
+        </div>
+        
         <div class="table-container">
-          <table id="kpiTable">
+          <table class="data-table" id="kpiTable">
             <thead>
               <tr>
-                <th>Faculty Name</th>
+                <th>KPI Name</th>
                 <th>Period</th>
-                <th>Publications</th>
-                <th>Trainings</th>
-                <th>Presentations</th>
-                <th>KPI Score</th>
-                <th>Performance</th>
+                <th>Target</th>
+                <th>Actual</th>
+                <th>Achievement</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($entries as $i => $entry): ?>
-              <tr<?php if ($edit_index === $i) echo ' style="background:#ffeeba;"'; ?>>
-                <td data-label="Faculty Name"><?php echo htmlspecialchars($entry[0]); ?></td>
-                <td data-label="Period"><?php echo htmlspecialchars($entry[1]); ?></td>
-                <td data-label="Publications"><?php echo htmlspecialchars($entry[2]); ?></td>
-                <td data-label="Trainings"><?php echo htmlspecialchars($entry[3]); ?></td>
-                <td data-label="Presentations"><?php echo htmlspecialchars($entry[4]); ?></td>
-                <td data-label="KPI Score"><span class="score"><?php echo htmlspecialchars($entry[5]); ?></span></td>
-                <td data-label="Performance"><span class="performance"><?php echo htmlspecialchars($entry[6]); ?></span></td>
-                <td>
-                  <form method="get" action="" style="display:inline;">
-                    <input type="hidden" name="edit" value="<?php echo $i; ?>">
-                    <button type="submit" class="btn">Edit</button>
-                  </form>
-                  <form method="post" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
-                    <input type="hidden" name="index" value="<?php echo $i; ?>">
-                    <button type="submit" name="delete" class="btn">Delete</button>
-                  </form>
-                </td>
-              </tr>
-              <?php if ($edit_index === $i && $edit_entry): ?>
-              <tr>
-                <td colspan="8">
-                  <form class="edit-entry-form" method="post" action="">
-                    <input type="hidden" name="save_edit" value="1">
-                    <input type="hidden" name="index" value="<?php echo $edit_index; ?>">
-                    <label>Faculty Name:<br><input type="text" name="faculty" value="<?php echo htmlspecialchars($edit_entry[0]); ?>" required></label><br>
-                    <label>Period:<br><input type="text" name="period" value="<?php echo htmlspecialchars($edit_entry[1]); ?>" required></label><br>
-                    <label>Publications:<br><input type="number" name="publications" min="0" value="<?php echo htmlspecialchars($edit_entry[2]); ?>" required></label><br>
-                    <label>Trainings:<br><input type="number" name="trainings" min="0" value="<?php echo htmlspecialchars($edit_entry[3]); ?>" required></label><br>
-                    <label>Presentations:<br><input type="number" name="presentations" min="0" value="<?php echo htmlspecialchars($edit_entry[4]); ?>" required></label><br>
-                    <label>KPI Score:<br><input type="number" name="score" min="0" max="10" step="0.1" value="<?php echo htmlspecialchars($edit_entry[5]); ?>" required></label><br>
-                    <label>Performance:<br>
-                      <select name="performance" required>
-                        <option value="Excellent" <?php if ($edit_entry[6]==='Excellent') echo 'selected'; ?>>Excellent</option>
-                        <option value="Very Good" <?php if ($edit_entry[6]==='Very Good') echo 'selected'; ?>>Very Good</option>
-                        <option value="Good" <?php if ($edit_entry[6]==='Good') echo 'selected'; ?>>Good</option>
-                        <option value="Satisfactory" <?php if ($edit_entry[6]==='Satisfactory') echo 'selected'; ?>>Satisfactory</option>
-                        <option value="Needs Improvement" <?php if ($edit_entry[6]==='Needs Improvement') echo 'selected'; ?>>Needs Improvement</option>
-                      </select>
-                    </label><br>
-                    <button type="submit" class="btn">Save Changes</button>
-                  </form>
-                </td>
-              </tr>
+              <?php if (empty($entries)): ?>
+                <tr class="empty-state">
+                  <td colspan="7">
+                    <div class="empty-content">
+                      <i class="fas fa-target"></i>
+                      <h3>No KPI records found</h3>
+                      <p>Add your first KPI record to get started</p>
+                      <button class="btn btn-primary" id="addFirstBtn">
+                        <i class="fas fa-plus"></i>
+                        Add KPI
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <?php else: ?>
+                <?php foreach ($entries as $i => $entry): ?>
+                <tr data-index="<?php echo $i; ?>">
+                  <td data-label="KPI Name">
+                    <div class="kpi-name">
+                      <strong><?php echo htmlspecialchars($entry[0]); ?></strong>
+                    </div>
+                  </td>
+                  <td data-label="Period">
+                    <span class="period-info"><?php echo htmlspecialchars($entry[1]); ?></span>
+                  </td>
+                  <td data-label="Target">
+                    <span class="target-value"><?php echo htmlspecialchars($entry[2]); ?></span>
+                  </td>
+                  <td data-label="Actual">
+                    <span class="actual-value"><?php echo htmlspecialchars($entry[3]); ?></span>
+                  </td>
+                  <td data-label="Achievement">
+                    <span class="achievement-percentage"><?php echo htmlspecialchars($entry[4]); ?></span>
+                  </td>
+                  <td data-label="Status">
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[5])); ?>">
+                      <?php echo htmlspecialchars($entry[5]); ?>
+                    </span>
+                  </td>
+                  <td data-label="Actions">
+                    <div class="action-buttons">
+                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
+                              data-kpi-name="<?php echo htmlspecialchars($entry[0]); ?>"
+                              data-period="<?php echo htmlspecialchars($entry[1]); ?>"
+                              data-target="<?php echo htmlspecialchars($entry[2]); ?>"
+                              data-actual="<?php echo htmlspecialchars($entry[3]); ?>"
+                              data-achievement="<?php echo htmlspecialchars($entry[4]); ?>"
+                              data-status="<?php echo htmlspecialchars($entry[5]); ?>">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this KPI record?');">
+                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <button type="submit" name="delete" class="action-btn delete-btn">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
               <?php endif; ?>
-              <?php endforeach; ?>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  </div>
+  </main>
+
+  <style>
+    .kpi-name strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    .period-info {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .target-value,
+    .actual-value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .achievement-percentage {
+      background: #f0f9ff;
+      color: #0369a1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .status-on-track {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .status-exceeded {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .status-behind-schedule {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .status-at-risk {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+  </style>
+
+  <script src="../js/theme.js"></script>
   <script>
-    document.getElementById('showAddForm').onclick = function() {
-      document.getElementById('addEntryForm').style.display = 'block';
-    };
-    document.getElementById('cancelAddForm').onclick = function() {
-      document.getElementById('addEntryForm').style.display = 'none';
-    };
+    // Profile menu toggle
     const profileMenu = document.getElementById('profileMenu');
-    const profileIconBtn = document.getElementById('profileIconBtn');
+    const profileBtn = document.getElementById('profileBtn');
     const profileDropdown = document.getElementById('profileDropdown');
-    document.addEventListener('click', function(e) {
-      if (profileMenu.contains(e.target)) {
-        profileMenu.classList.toggle('open');
-      } else {
+
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!profileMenu.contains(e.target)) {
         profileMenu.classList.remove('open');
       }
+    });
+
+    // Modal functionality
+    const addModal = document.getElementById('addModal');
+    const editModal = document.getElementById('editModal');
+    const addBtn = document.getElementById('addBtn');
+    const addFirstBtn = document.getElementById('addFirstBtn');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const cancelAdd = document.getElementById('cancelAdd');
+    const cancelEdit = document.getElementById('cancelEdit');
+
+    function openModal(modal) {
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+
+    addBtn.addEventListener('click', () => openModal(addModal));
+    if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
+    closeAddModal.addEventListener('click', () => closeModal(addModal));
+    cancelAdd.addEventListener('click', () => closeModal(addModal));
+    closeEditModal.addEventListener('click', () => closeModal(editModal));
+    cancelEdit.addEventListener('click', () => closeModal(editModal));
+
+    // Close modal when clicking outside
+    [addModal, editModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal(modal);
+        }
+      });
+    });
+
+    // Edit functionality
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.edit-btn')) {
+        const btn = e.target.closest('.edit-btn');
+        const index = btn.dataset.index;
+        const kpiName = btn.dataset.kpiName;
+        const period = btn.dataset.period;
+        const target = btn.dataset.target;
+        const actual = btn.dataset.actual;
+        const achievement = btn.dataset.achievement;
+        const status = btn.dataset.status;
+
+        document.getElementById('editIndex').value = index;
+        document.getElementById('editKpiName').value = kpiName;
+        document.getElementById('editPeriod').value = period;
+        document.getElementById('editTarget').value = target;
+        document.getElementById('editActual').value = actual;
+        document.getElementById('editAchievement').value = achievement;
+        document.getElementById('editStatus').value = status;
+
+        openModal(editModal);
+      }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const tableRows = document.querySelectorAll('#kpiTable tbody tr');
+
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      
+      tableRows.forEach(row => {
+        if (row.classList.contains('empty-state')) return;
+        
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // Upload button (placeholder)
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      alert('Upload functionality will be implemented here');
     });
   </script>
 </body>

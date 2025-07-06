@@ -19,12 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entries = [];
     if (file_exists($data_file)) {
         $fp = fopen($data_file, 'r');
-        $is_first_row = true;
         while ($row = fgetcsv($fp)) {
-            if ($is_first_row) {
-                $is_first_row = false;
-                continue; // skip header
-            }
             $entries[] = $row;
         }
         fclose($fp);
@@ -36,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -59,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date && $name && $venue && $facilitators && $num_participants && $status) {
             $entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -77,7 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date && $name && $venue && $facilitators && $num_participants && $status) {
             $entries[] = [$date, $name, $venue, $facilitators, $num_participants, $status];
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Date', 'Activity Name', 'Venue', 'Facilitators/Participants', 'No. of Participants', 'Status']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -93,12 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // skip header
-        }
         $entries[] = $row;
     }
     fclose($fp);
@@ -120,267 +107,442 @@ if (isset($_GET['edit'])) {
   <meta charset="UTF-8">
   <title>Research Capacity Building Activities</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
- <link rel="stylesheet" href="../css/research capacity.css">
- <style>
- .add-entry-form { display: none; background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
- .add-entry-form.active { display: block; }
- .add-entry-form input, .add-entry-form select { margin-bottom: 10px; width: 100%; padding: 8px; }
- .add-entry-form label { font-weight: bold; }
- .edit-entry-form { background: #f1f1f1; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
- header {
-   position: fixed;
-   top: 0;
-   left: 0;
-   width: 100vw;
-   z-index: 1000;
-   background: #fff;
-   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
- }
- body {
-   margin: 0;
-   padding-top: 80px;
- }
- .profile-menu {
-   position: fixed;
-   top: 18px;
-   right: 40px;
-   z-index: 1100;
-   display: flex;
-   align-items: center;
- }
- .profile-icon-btn {
-   background: #e9ecdf;
-   border: none;
-   border-radius: 50%;
-   width: 44px;
-   height: 44px;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   cursor: pointer;
-   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-   transition: background 0.2s;
-   font-size: 1.7rem;
-   padding: 0;
- }
- .profile-icon-btn:hover {
-   background: #d2d8c2;
- }
- .profile-dropdown {
-   display: none;
-   position: absolute;
-   top: 54px;
-   right: 0;
-   background: #fff;
-   border-radius: 10px;
-   box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-   min-width: 240px;
-   padding: 16px 20px 12px 20px;
-   text-align: left;
-   animation: fadeIn 0.2s;
-   box-sizing: border-box;
- }
- .profile-menu.open .profile-dropdown {
-   display: block;
- }
- .profile-dropdown form {
-   margin: 0;
-   padding: 0 18px;
- }
- .profile-dropdown button {
-   background: #b94a48;
-   color: #fff;
-   border: none;
-   border-radius: 6px;
-   padding: 7px 18px;
-   font-size: 1rem;
-   cursor: pointer;
-   margin-top: 6px;
-   width: 100%;
-   text-align: center;
-   transition: background 0.2s;
- }
- .profile-dropdown button:hover {
-   background: #a94442;
- }
- @keyframes fadeIn {
-   from { opacity: 0; transform: translateY(-10px); }
-   to { opacity: 1; transform: translateY(0); }
- }
- </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/modern-theme.css">
+  <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-<div class="profile-menu" id="profileMenu">
-    <button class="profile-icon-btn" id="profileIconBtn" aria-label="Profile">
-      <!-- SVG user icon -->
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
-    </button>
-    <div class="profile-dropdown" id="profileDropdown">
-      <div style="font-weight: 600; margin-bottom: 4px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <div class="logo">
+        <img src="../pics/rso-bg.png" alt="UC Logo">
+        <span>UC RSO</span>
       </div>
-      <div style="font-size:0.9em; color:#6a7a5e; margin-bottom:2px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?>
-      </div>
-      <div style="font-size:0.85em; color:#9a9a8a; text-align: left;">
-        <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
-      </div>
-      <div style="border-top: 1px solid #eee; margin: 10px 0; padding-top: 10px; text-align: left;">
-        <a href="edit_profile.php" style="display: block; color: #6a7a5e; text-decoration: none; padding: 8px 0; font-size: 0.9em; text-align: left;">Edit Profile</a>
-      </div>
-      <form method="post">
-        <button type="submit" name="logout">Logout</button>
-      </form>
-    </div>
-  </div>
-  <header>
-    <div class="logo">
-      <img src="../pics/rso-bg.png" alt="UC Logo">
-      UC RSO
-    </div>
-    <nav>
-      <a href="../index.php">Dashboard</a>
-      <a href="Research  Capacity Buildings Activities.php" class="active">Research Capacity Building</a>
-      <a href="Data Collection Tools.php">Data Collection Tools</a>
-      <a href="Ethicss Reviewed Protocols.php">Ethics Reviewed Protocols</a>
-      <a href="Publication and Presentation.php">Publications and Presentations</a>
-      <a href="KPI records.php">KPI Records</a>
-    </nav>
+      <nav class="nav">
+        <a href="../index.php" class="nav-link">
+          <i class="fas fa-home"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="Research  Capacity Buildings Activities.php" class="nav-link active">
+          <i class="fas fa-chart-line"></i>
+          <span>Research Capacity</span>
+        </a>
+        <a href="Data Collection Tools.php" class="nav-link">
+          <i class="fas fa-database"></i>
+          <span>Data Collection</span>
+        </a>
+        <a href="Ethicss Reviewed Protocols.php" class="nav-link">
+          <i class="fas fa-shield-alt"></i>
+          <span>Ethics Protocols</span>
+        </a>
+        <a href="Publication and Presentation.php" class="nav-link">
+          <i class="fas fa-book"></i>
+          <span>Publications</span>
+        </a>
+        <a href="KPI records.php" class="nav-link">
+          <i class="fas fa-target"></i>
+          <span>KPI Records</span>
+        </a>
+      </nav>
       
-  </header>
-  <div class="dashboard-bg">
-    <div class="container">
-      <h1>Research Capacity Building Activities</h1>
-      <div class="subtitle">Track faculty development and research enhancement programs</div>
-      <div class="actions">
-        <button class="btn upload">&#8682; Upload Excel File</button>
-        <button class="btn add" id="showAddForm">+ Add New Entry</button>
-      </div>
-      <form class="add-entry-form" id="addEntryForm" method="post" action="">
-        <input type="hidden" name="add_entry" value="1">
-        <label>Date of Activity:<br><input type="date" name="date" required></label><br>
-        <label>Name of Activity:<br><input type="text" name="name" required></label><br>
-        <label>Venue:<br><input type="text" name="venue" required></label><br>
-        <label>Facilitators/Participants:<br><input type="text" name="facilitators" required></label><br>
-        <label>Number of Participants:<br><input type="number" name="num_participants" min="1" required></label><br>
-        <label>Activity Report Status:<br>
-          <select name="status" required>
-            <option value="Completed">Completed</option>
-            <option value="Pending">Pending</option>
-          </select>
-        </label><br>
-        <button type="submit" class="btn">Add Entry</button>
-        <button type="button" class="btn" id="cancelAddForm">Cancel</button>
-      </form>
-      <div class="panel">
-        <h2>Research Activities Overview</h2>
-        <div class="search-bar-wrapper">
-          <span class="search-icon">&#128269;</span>
-          <input class="search-bar" type="text" placeholder="Search research activities..." onkeyup="filterTable()">
+      <!-- Theme Toggle -->
+      <button class="theme-toggle" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      
+      <!-- Profile Menu -->
+      <div class="profile-menu" id="profileMenu">
+        <button class="profile-btn" id="profileBtn">
+          <?php
+            $profile_picture = $_SESSION['profile_picture'] ?? '';
+            $profile_picture_path = '';
+            if (!empty($profile_picture)) {
+              if (strpos($profile_picture, '../') === 0) {
+                $full_path = __DIR__ . '/' . $profile_picture;
+                if (file_exists($full_path)) {
+                  $profile_picture_path = $profile_picture;
+                }
+              } else {
+                $profile_picture_path = $profile_picture;
+              }
+            }
+          ?>
+          <?php if ($profile_picture_path): ?>
+            <img src="<?php echo htmlspecialchars($profile_picture_path); ?>" alt="Profile" class="profile-img">
+          <?php else: ?>
+            <img src="../pics/rso-bg.png" alt="Profile" class="profile-img">
+          <?php endif; ?>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="profile-info">
+            <div class="profile-name"><?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?></div>
+            <div class="profile-role"><?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?></div>
+            <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
+          </div>
+          <div class="profile-actions">
+            <a href="edit_profile.php" class="profile-action">
+              <i class="fas fa-user-edit"></i>
+              Edit Profile
+            </a>
+            <form method="post" class="logout-form">
+              <button type="submit" name="logout" class="profile-action logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </form>
+          </div>
         </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-title">
+          <h1>Research Capacity Building Activities</h1>
+          <p>Track and manage research capacity building initiatives and training programs</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" id="uploadBtn">
+            <i class="fas fa-upload"></i>
+            Upload Excel
+          </button>
+          <button class="btn btn-primary" id="addBtn">
+            <i class="fas fa-plus"></i>
+            Add New Activity
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Entry Modal -->
+      <div class="modal" id="addModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Add New Research Activity</h3>
+            <button class="modal-close" id="closeAddModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="">
+            <input type="hidden" name="add_entry" value="1">
+            <div class="form-group">
+              <label for="date">Date</label>
+              <input type="date" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+              <label for="name">Activity Name</label>
+              <input type="text" id="name" name="name" required placeholder="Enter activity name">
+            </div>
+            <div class="form-group">
+              <label for="venue">Venue</label>
+              <input type="text" id="venue" name="venue" required placeholder="Enter venue">
+            </div>
+            <div class="form-group">
+              <label for="facilitators">Facilitators</label>
+              <input type="text" id="facilitators" name="facilitators" required placeholder="Enter facilitators">
+            </div>
+            <div class="form-group">
+              <label for="num_participants">Number of Participants</label>
+              <input type="number" id="num_participants" name="num_participants" required placeholder="Enter number of participants">
+            </div>
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status" name="status" required>
+                <option value="">Select status</option>
+                <option value="Completed">Completed</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add Activity</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Entry Modal -->
+      <div class="modal" id="editModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit Research Activity</h3>
+            <button class="modal-close" id="closeEditModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="" id="editForm">
+            <input type="hidden" name="save_edit" value="1">
+            <input type="hidden" name="index" id="editIndex">
+            <div class="form-group">
+              <label for="editDate">Date</label>
+              <input type="date" id="editDate" name="date" required>
+            </div>
+            <div class="form-group">
+              <label for="editName">Activity Name</label>
+              <input type="text" id="editName" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="editVenue">Venue</label>
+              <input type="text" id="editVenue" name="venue" required>
+            </div>
+            <div class="form-group">
+              <label for="editFacilitators">Facilitators</label>
+              <input type="text" id="editFacilitators" name="facilitators" required>
+            </div>
+            <div class="form-group">
+              <label for="editNumParticipants">Number of Participants</label>
+              <input type="number" id="editNumParticipants" name="num_participants" required>
+            </div>
+            <div class="form-group">
+              <label for="editStatus">Status</label>
+              <select id="editStatus" name="status" required>
+                <option value="Completed">Completed</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="data-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-chart-line"></i>
+            <h2>Research Capacity Activities Overview</h2>
+          </div>
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search activities..." id="searchInput">
+          </div>
+        </div>
+        
         <div class="table-container">
-          <table id="activitiesTable">
+          <table class="data-table" id="activitiesTable">
             <thead>
               <tr>
-                <th>Date of Activity</th>
-                <th>Name of Activity</th>
+                <th>Date</th>
+                <th>Activity Name</th>
                 <th>Venue</th>
-                <th>Facilitators/Participants</th>
-                <th>Number of Participants</th>
-                <th>Activity Report</th>
+                <th>Facilitators</th>
+                <th>Participants</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($entries as $i => $entry): ?>
-              <tr<?php if ($edit_index === $i) echo ' style="background:#ffeeba;"'; ?>>
-                <td data-label="Date of Activity"><?php echo htmlspecialchars($entry[0]); ?></td>
-                <td data-label="Name of Activity"><strong><?php echo htmlspecialchars($entry[1]); ?></strong></td>
-                <td data-label="Venue"><?php echo htmlspecialchars($entry[2]); ?></td>
-                <td data-label="Facilitators/Participants"><?php echo htmlspecialchars($entry[3]); ?></td>
-                <td data-label="Number of Participants"><strong><?php echo htmlspecialchars($entry[4]); ?></strong></td>
-                <td data-label="Activity Report"><span class="status <?php echo strtolower($entry[5]); ?>"><?php echo htmlspecialchars($entry[5]); ?></span></td>
-                <td>
-                  <form method="get" action="" style="display:inline;">
-                    <input type="hidden" name="edit" value="<?php echo $i; ?>">
-                    <button type="submit" class="btn">Edit</button>
-                  </form>
-                  <form method="post" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
-                    <input type="hidden" name="index" value="<?php echo $i; ?>">
-                    <button type="submit" name="delete" class="btn">Delete</button>
-                  </form>
-                </td>
-              </tr>
-              <?php if ($edit_index === $i && $edit_entry): ?>
-              <tr>
-                <td colspan="7">
-                  <form class="edit-entry-form" method="post" action="">
-                    <input type="hidden" name="save_edit" value="1">
-                    <input type="hidden" name="index" value="<?php echo $edit_index; ?>">
-                    <label>Date of Activity:<br><input type="date" name="date" value="<?php echo htmlspecialchars($edit_entry[0]); ?>" required></label><br>
-                    <label>Name of Activity:<br><input type="text" name="name" value="<?php echo htmlspecialchars($edit_entry[1]); ?>" required></label><br>
-                    <label>Venue:<br><input type="text" name="venue" value="<?php echo htmlspecialchars($edit_entry[2]); ?>" required></label><br>
-                    <label>Facilitators/Participants:<br><input type="text" name="facilitators" value="<?php echo htmlspecialchars($edit_entry[3]); ?>" required></label><br>
-                    <label>Number of Participants:<br><input type="number" name="num_participants" min="1" value="<?php echo htmlspecialchars($edit_entry[4]); ?>" required></label><br>
-                    <label>Activity Report Status:<br>
-                      <select name="status" required>
-                        <option value="Completed" <?php if ($edit_entry[5]==='Completed') echo 'selected'; ?>>Completed</option>
-                        <option value="Pending" <?php if ($edit_entry[5]==='Pending') echo 'selected'; ?>>Pending</option>
-                      </select>
-                    </label><br>
-                    <button type="submit" class="btn">Save Changes</button>
-                  </form>
-                </td>
-              </tr>
+              <?php if (empty($entries)): ?>
+                <tr class="empty-state">
+                  <td colspan="7">
+                    <div class="empty-content">
+                      <i class="fas fa-chart-line"></i>
+                      <h3>No research activities found</h3>
+                      <p>Add your first research capacity building activity to get started</p>
+                      <button class="btn btn-primary" id="addFirstBtn">
+                        <i class="fas fa-plus"></i>
+                        Add Activity
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <?php else: ?>
+                <?php foreach ($entries as $i => $entry): ?>
+                <tr data-index="<?php echo $i; ?>">
+                  <td data-label="Date">
+                    <span class="date-info"><?php echo htmlspecialchars($entry[0]); ?></span>
+                  </td>
+                  <td data-label="Activity Name">
+                    <div class="activity-title">
+                      <h4><?php echo htmlspecialchars($entry[1]); ?></h4>
+                    </div>
+                  </td>
+                  <td data-label="Venue">
+                    <span class="venue-info"><?php echo htmlspecialchars($entry[2]); ?></span>
+                  </td>
+                  <td data-label="Facilitators">
+                    <span class="facilitators-info"><?php echo htmlspecialchars($entry[3]); ?></span>
+                  </td>
+                  <td data-label="Participants">
+                    <span class="participants-count"><?php echo htmlspecialchars($entry[4]); ?></span>
+                  </td>
+                  <td data-label="Status">
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[5])); ?>">
+                      <?php echo htmlspecialchars($entry[5]); ?>
+                    </span>
+                  </td>
+                  <td data-label="Actions">
+                    <div class="action-buttons">
+                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
+                              data-date="<?php echo htmlspecialchars($entry[0]); ?>"
+                              data-name="<?php echo htmlspecialchars($entry[1]); ?>"
+                              data-venue="<?php echo htmlspecialchars($entry[2]); ?>"
+                              data-facilitators="<?php echo htmlspecialchars($entry[3]); ?>"
+                              data-participants="<?php echo htmlspecialchars($entry[4]); ?>"
+                              data-status="<?php echo htmlspecialchars($entry[5]); ?>">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this activity?');">
+                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <button type="submit" name="delete" class="action-btn delete-btn">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
               <?php endif; ?>
-              <?php endforeach; ?>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  </div>
-  <script>
-    document.getElementById('showAddForm').onclick = function() {
-      document.getElementById('addEntryForm').classList.add('active');
-    };
-    document.getElementById('cancelAddForm').onclick = function() {
-      document.getElementById('addEntryForm').classList.remove('active');
-    };
-    function filterTable() {
-      var input = document.querySelector('.search-bar');
-      var filter = input.value.toLowerCase();
-      var table = document.getElementById('activitiesTable');
-      var trs = table.getElementsByTagName('tr');
-      for (var i = 1; i < trs.length; i++) {
-        var tds = trs[i].getElementsByTagName('td');
-        // Only filter data rows (7 columns), skip edit form rows (colspan=7)
-        if (tds.length === 7) {
-          var show = false;
-          for (var j = 0; j < tds.length - 1; j++) { // Exclude Actions column if you want
-            if (tds[j].textContent.toLowerCase().indexOf(filter) > -1) {
-              show = true;
-              break;
-            }
-          }
-          trs[i].style.display = show ? '' : 'none';
-          // Also hide the edit form row if its data row is hidden
-          if (trs[i + 1] && trs[i + 1].querySelector('.edit-entry-form')) {
-            trs[i + 1].style.display = show ? '' : 'none';
-          }
-        }
-      }
+  </main>
+
+  <style>
+    .date-info {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
     }
+    
+    .activity-title h4 {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    .venue-info,
+    .facilitators-info {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    
+    .participants-count {
+      background: #f0f9ff;
+      color: #0369a1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  </style>
+
+  <script src="../js/theme.js"></script>
+  <script>
+    // Profile menu toggle
     const profileMenu = document.getElementById('profileMenu');
-    const profileIconBtn = document.getElementById('profileIconBtn');
+    const profileBtn = document.getElementById('profileBtn');
     const profileDropdown = document.getElementById('profileDropdown');
-    document.addEventListener('click', function(e) {
-      if (profileMenu.contains(e.target)) {
-        profileMenu.classList.toggle('open');
-      } else {
+
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!profileMenu.contains(e.target)) {
         profileMenu.classList.remove('open');
       }
+    });
+
+    // Modal functionality
+    const addModal = document.getElementById('addModal');
+    const editModal = document.getElementById('editModal');
+    const addBtn = document.getElementById('addBtn');
+    const addFirstBtn = document.getElementById('addFirstBtn');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const cancelAdd = document.getElementById('cancelAdd');
+    const cancelEdit = document.getElementById('cancelEdit');
+
+    function openModal(modal) {
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+
+    addBtn.addEventListener('click', () => openModal(addModal));
+    if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
+    closeAddModal.addEventListener('click', () => closeModal(addModal));
+    cancelAdd.addEventListener('click', () => closeModal(addModal));
+    closeEditModal.addEventListener('click', () => closeModal(editModal));
+    cancelEdit.addEventListener('click', () => closeModal(editModal));
+
+    // Close modal when clicking outside
+    [addModal, editModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal(modal);
+        }
+      });
+    });
+
+    // Edit functionality
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.edit-btn')) {
+        const btn = e.target.closest('.edit-btn');
+        const index = btn.dataset.index;
+        const date = btn.dataset.date;
+        const name = btn.dataset.name;
+        const venue = btn.dataset.venue;
+        const facilitators = btn.dataset.facilitators;
+        const participants = btn.dataset.participants;
+        const status = btn.dataset.status;
+
+        document.getElementById('editIndex').value = index;
+        document.getElementById('editDate').value = date;
+        document.getElementById('editName').value = name;
+        document.getElementById('editVenue').value = venue;
+        document.getElementById('editFacilitators').value = facilitators;
+        document.getElementById('editNumParticipants').value = participants;
+        document.getElementById('editStatus').value = status;
+
+        openModal(editModal);
+      }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const tableRows = document.querySelectorAll('#activitiesTable tbody tr');
+
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      
+      tableRows.forEach(row => {
+        if (row.classList.contains('empty-state')) return;
+        
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // Upload button (placeholder)
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      alert('Upload functionality will be implemented here');
     });
   </script>
 </body>

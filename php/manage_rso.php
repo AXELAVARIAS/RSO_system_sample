@@ -7,8 +7,14 @@
     <meta charset="UTF-8">
     <title>RSO Member Management</title>
     <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
+    <!-- Theme Toggle for RSO Page -->
+    <button class="theme-toggle" title="Toggle Theme" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <i class="fas fa-moon"></i>
+    </button>
+    
     <a href="../index.php" class="back-btn">Back to Dashboard</a>
     <div class="login-container">
         <div class="logo">
@@ -19,5 +25,6 @@
             <p>This is the RSO management page. (Placeholder for RSO-specific features.)</p>
         </div>
     </div>
+    <script src="../js/theme.js"></script>
 </body>
 </html> 

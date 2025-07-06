@@ -14,27 +14,20 @@ $data_file = __DIR__ . '/publication_presentation.csv';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Read all entries (skip header)
-    $entries = [];
-    if (file_exists($data_file)) {
-        $fp = fopen($data_file, 'r');
-        $is_first_row = true;
-        while ($row = fgetcsv($fp)) {
-            if ($is_first_row) {
-                $is_first_row = false;
-                continue; // skip header
-            }
-            $entries[] = $row;
-        }
-        fclose($fp);
-    }
     // Handle delete
     if (isset($_POST['delete']) && isset($_POST['index'])) {
+        $entries = [];
+        if (file_exists($data_file)) {
+            $fp = fopen($data_file, 'r');
+            while ($row = fgetcsv($fp)) {
+                $entries[] = $row;
+            }
+            fclose($fp);
+        }
         $index = (int)$_POST['index'];
         if (isset($entries[$index])) {
             array_splice($entries, $index, 1);
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -45,18 +38,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Handle edit save
     if (isset($_POST['save_edit']) && isset($_POST['index'])) {
+        $entries = [];
+        if (file_exists($data_file)) {
+            $fp = fopen($data_file, 'r');
+            while ($row = fgetcsv($fp)) {
+                $entries[] = $row;
+            }
+            fclose($fp);
+        }
         $index = (int)$_POST['index'];
         $date = $_POST['date'] ?? '';
-        $faculty = $_POST['faculty'] ?? '';
+        $author = $_POST['author'] ?? '';
         $title = $_POST['title'] ?? '';
-        $department = $_POST['department'] ?? '';
-        $subsidy = $_POST['subsidy'] ?? '';
-        $status = $_POST['status'] ?? '';
-        $locality = $_POST['locality'] ?? '';
-        if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
-            $entries[$index] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
+        $journal = $_POST['journal'] ?? '';
+        $doi = $_POST['doi'] ?? '';
+        $impact_factor = $_POST['impact_factor'] ?? '';
+        $citations = $_POST['citations'] ?? '';
+        if ($date && $author && $title && $journal && $doi && $impact_factor && $citations) {
+            $entries[$index] = [$date, $author, $title, $journal, $doi, $impact_factor, $citations];
             $fp = fopen($data_file, 'w');
-            fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
             foreach ($entries as $entry) {
                 fputcsv($fp, $entry);
             }
@@ -67,35 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Handle add
     $date = $_POST['date'] ?? '';
-    $faculty = $_POST['faculty'] ?? '';
+    $author = $_POST['author'] ?? '';
     $title = $_POST['title'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $subsidy = $_POST['subsidy'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $locality = $_POST['locality'] ?? '';
-    if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
-<<<<<<< HEAD
-        $entries[] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
-        $fp = fopen($data_file, 'w');
-        fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
-        foreach ($entries as $entry) {
-            fputcsv($fp, $entry);
-        }
-=======
-        $entry = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
-        
-        // Check if file exists and has content
-        $file_exists = file_exists($data_file) && filesize($data_file) > 0;
-        
+    $journal = $_POST['journal'] ?? '';
+    $doi = $_POST['doi'] ?? '';
+    $impact_factor = $_POST['impact_factor'] ?? '';
+    $citations = $_POST['citations'] ?? '';
+    if ($date && $author && $title && $journal && $doi && $impact_factor && $citations) {
+        $entry = [$date, $author, $title, $journal, $doi, $impact_factor, $citations];
         $fp = fopen($data_file, 'a');
-        
-        // Only write header if file doesn't exist or is empty
-        if (!$file_exists) {
-            fputcsv($fp, ['Date', 'Faculty', 'Title', 'Department', 'Subsidy', 'Status', 'Locality']);
-        }
-        
         fputcsv($fp, $entry);
->>>>>>> 1a45931fd31d5f14183946795bd7dae27e65635b
         fclose($fp);
     }
     header('Location: ' . $_SERVER['PHP_SELF']);
@@ -104,22 +85,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Predefined entries
 $default_entries = [
-    ['2025-05-15', 'Dr. Sarah Johnson', 'AI-Driven Healthcare Solutions for Rural Communities', 'Computer Science', '₱75,000', 'Approved', 'International'],
-    ['2025-05-10', 'Prof. Michael Chen', 'Sustainable Urban Development Strategies', 'Environmental Engineering', '₱50,000', 'Under Review', 'Local'],
-    ['2025-05-08', 'Dr. Emily Rodriguez', 'Digital Learning Platforms in Higher Education', 'Education', '₱35,000', 'Approved', 'International'],
+    ['2025-01-15', 'Dr. Sarah Johnson', 'Machine Learning Applications in Healthcare', 'Journal of Medical Informatics', '10.1000/abc123', '3.45', '25'],
+    ['2025-02-20', 'Prof. Michael Chen', 'Sustainable Energy Systems in Urban Planning', 'Environmental Engineering Review', '10.1000/def456', '2.78', '18'],
+    ['2025-03-10', 'Dr. Emily Rodriguez', 'Educational Technology Impact on Student Learning', 'Educational Technology Research', '10.1000/ghi789', '4.12', '32'],
 ];
 
 // Read all entries
 $entries = [];
 if (file_exists($data_file)) {
     $fp = fopen($data_file, 'r');
-    $is_first_row = true;
     while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            // Skip header row
-            continue;
-        }
         $entries[] = $row;
     }
     fclose($fp);
@@ -139,280 +114,469 @@ if (isset($_GET['edit'])) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Publications and Presentations</title>
+  <title>Publication and Presentation</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/publication.css">
-  <style>
-    .edit-entry-form { background: #f1f1f1; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      z-index: 1000;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    body {
-      margin: 0;
-      padding-top: 80px;
-    }
-    .profile-menu {
-      position: fixed;
-      top: 18px;
-      right: 40px;
-      z-index: 1100;
-      display: flex;
-      align-items: center;
-    }
-    .profile-icon-btn {
-      background: #e9ecdf;
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: background 0.2s;
-      font-size: 1.7rem;
-      padding: 0;
-    }
-    .profile-icon-btn:hover {
-      background: #d2d8c2;
-    }
-    .profile-dropdown {
-      display: none;
-      position: absolute;
-      top: 54px;
-      right: 0;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-      min-width: 240px;
-      padding: 16px 20px 12px 20px;
-      text-align: left;
-      animation: fadeIn 0.2s;
-      box-sizing: border-box;
-    }
-    .profile-menu.open .profile-dropdown {
-      display: block;
-    }
-    .profile-dropdown form {
-      margin: 0;
-      padding: 0 0;
-    }
-    .profile-dropdown button {
-      background: #b94a48;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 7px 18px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-top: 6px;
-      width: 100%;
-      text-align: center;
-      transition: background 0.2s;
-    }
-    .profile-dropdown button:hover {
-      background: #a94442;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/modern-theme.css">
+  <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-<div class="profile-menu" id="profileMenu">
-    <button class="profile-icon-btn" id="profileIconBtn" aria-label="Profile">
-      <!-- SVG user icon -->
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6a7a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-2.5 3.5-4 8-4s8 1.5 8 4"/></svg>
-    </button>
-    <div class="profile-dropdown" id="profileDropdown">
-      <div style="font-weight: 600; margin-bottom: 4px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <div class="logo">
+        <img src="../pics/rso-bg.png" alt="UC Logo">
+        <span>UC RSO</span>
       </div>
-      <div style="font-size:0.9em; color:#6a7a5e; margin-bottom:2px; text-align: left;">
-        <?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?>
-      </div>
-      <div style="font-size:0.85em; color:#9a9a8a; text-align: left;">
-        <?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?>
-      </div>
-      <div style="border-top: 1px solid #eee; margin: 10px 0; padding-top: 10px; text-align: left;">
-        <a href="edit_profile.php" style="display: block; color: #6a7a5e; text-decoration: none; padding: 8px 0; font-size: 0.9em; text-align: left;">Edit Profile</a>
-      </div>
-      <form method="post">
-        <button type="submit" name="logout">Logout</button>
-      </form>
-    </div>
-  </div>
-  <header>
-    <div class="logo">
-      <img src="../pics/rso-bg.png" alt="UC Logo">
-      UC RSO
-    </div>
-    <nav>
-      <a href="../index.php">Dashboard</a>
-      <a href="Research  Capacity Buildings Activities.php">Research Capacity Building</a>
-      <a href="Data Collection Tools.php">Data Collection Tools</a>
-      <a href="Ethicss Reviewed Protocols.php">Ethics Reviewed Protocols</a>
-      <a href="Publication and Presentation.php" class="active">Publications and Presentations</a>
-      <a href="KPI records.php">KPI Records</a>
-    </nav>
-    
-  </header>
-  <div class="dashboard-bg">
-    <div class="container">
-      <h1>Publications and Presentations</h1>
-      <div class="subtitle">Track research funding applications and publication subsidies</div>
-      <div class="actions">
-        <button class="btn upload">&#8682; Upload Excel File</button>
-        <button class="btn add" id="showAddForm">+ Add New Entry</button>
-      </div>
-      <form class="add-entry-form" id="addEntryForm" method="post" action="" style="display:none; background:#f9f9f9; padding:20px; border-radius:8px; margin-bottom:20px;">
-        <label>Date of Application:<br><input type="date" name="date" required></label><br>
-        <label>Name of Faculty/Research Worker:<br><input type="text" name="faculty" required></label><br>
-        <label>Title of Paper:<br><input type="text" name="title" required></label><br>
-        <label>Department:<br><input type="text" name="department" required></label><br>
-        <label>Research Subsidy:<br><input type="text" name="subsidy" required></label><br>
-        <label>Status:<br>
-          <select name="status" required>
-            <option value="Approved">Approved</option>
-            <option value="Under Review">Under Review</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </label><br>
-        <label>Local/International:<br>
-          <select name="locality" required>
-            <option value="Local">Local</option>
-            <option value="International">International</option>
-          </select>
-        </label><br>
-        <button type="submit" class="btn">Add Entry</button>
-        <button type="button" class="btn" id="cancelAddForm">Cancel</button>
-      </form>
-      <div class="panel">
-        <h2>Publications & Presentations Overview</h2>
-        <div class="search-bar-wrapper">
-          <span class="search-icon">&#128269;</span>
-          <input class="search-bar" type="text" placeholder="Search publications and presentations..." onkeyup="filterTable()">
+      <nav class="nav">
+        <a href="../index.php" class="nav-link">
+          <i class="fas fa-home"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="Research  Capacity Buildings Activities.php" class="nav-link">
+          <i class="fas fa-chart-line"></i>
+          <span>Research Capacity</span>
+        </a>
+        <a href="Data Collection Tools.php" class="nav-link">
+          <i class="fas fa-database"></i>
+          <span>Data Collection</span>
+        </a>
+        <a href="Ethicss Reviewed Protocols.php" class="nav-link">
+          <i class="fas fa-shield-alt"></i>
+          <span>Ethics Protocols</span>
+        </a>
+        <a href="Publication and Presentation.php" class="nav-link active">
+          <i class="fas fa-book"></i>
+          <span>Publications</span>
+        </a>
+        <a href="KPI records.php" class="nav-link">
+          <i class="fas fa-target"></i>
+          <span>KPI Records</span>
+        </a>
+      </nav>
+      
+      <!-- Theme Toggle -->
+      <button class="theme-toggle" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      
+      <!-- Profile Menu -->
+      <div class="profile-menu" id="profileMenu">
+        <button class="profile-btn" id="profileBtn">
+          <?php
+            $profile_picture = $_SESSION['profile_picture'] ?? '';
+            $profile_picture_path = '';
+            if (!empty($profile_picture)) {
+              if (strpos($profile_picture, '../') === 0) {
+                $full_path = __DIR__ . '/' . $profile_picture;
+                if (file_exists($full_path)) {
+                  $profile_picture_path = $profile_picture;
+                }
+              } else {
+                $profile_picture_path = $profile_picture;
+              }
+            }
+          ?>
+          <?php if ($profile_picture_path): ?>
+            <img src="<?php echo htmlspecialchars($profile_picture_path); ?>" alt="Profile" class="profile-img">
+          <?php else: ?>
+            <img src="../pics/rso-bg.png" alt="Profile" class="profile-img">
+          <?php endif; ?>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="profile-info">
+            <div class="profile-name"><?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'User'); ?></div>
+            <div class="profile-role"><?php echo htmlspecialchars($_SESSION['user_department'] ?? 'Department'); ?></div>
+            <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
+          </div>
+          <div class="profile-actions">
+            <a href="edit_profile.php" class="profile-action">
+              <i class="fas fa-user-edit"></i>
+              Edit Profile
+            </a>
+            <form method="post" class="logout-form">
+              <button type="submit" name="logout" class="profile-action logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </form>
+          </div>
         </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-title">
+          <h1>Publication and Presentation</h1>
+          <p>Manage research publications, presentations, and academic outputs</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary" id="uploadBtn">
+            <i class="fas fa-upload"></i>
+            Upload Excel
+          </button>
+          <button class="btn btn-primary" id="addBtn">
+            <i class="fas fa-plus"></i>
+            Add New Publication
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Entry Modal -->
+      <div class="modal" id="addModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Add New Publication</h3>
+            <button class="modal-close" id="closeAddModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="">
+            <div class="form-group">
+              <label for="date">Publication Date</label>
+              <input type="date" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+              <label for="author">Author</label>
+              <input type="text" id="author" name="author" required placeholder="Enter author name">
+            </div>
+            <div class="form-group">
+              <label for="title">Publication Title</label>
+              <input type="text" id="title" name="title" required placeholder="Enter publication title">
+            </div>
+            <div class="form-group">
+              <label for="journal">Journal/Conference</label>
+              <input type="text" id="journal" name="journal" required placeholder="Enter journal or conference name">
+            </div>
+            <div class="form-group">
+              <label for="doi">DOI</label>
+              <input type="text" id="doi" name="doi" required placeholder="Enter DOI">
+            </div>
+            <div class="form-group">
+              <label for="impact_factor">Impact Factor</label>
+              <input type="number" id="impact_factor" name="impact_factor" step="0.01" required placeholder="Enter impact factor">
+            </div>
+            <div class="form-group">
+              <label for="citations">Citations</label>
+              <input type="number" id="citations" name="citations" required placeholder="Enter number of citations">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add Publication</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Entry Modal -->
+      <div class="modal" id="editModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit Publication</h3>
+            <button class="modal-close" id="closeEditModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="" id="editForm">
+            <input type="hidden" name="save_edit" value="1">
+            <input type="hidden" name="index" id="editIndex">
+            <div class="form-group">
+              <label for="editDate">Publication Date</label>
+              <input type="date" id="editDate" name="date" required>
+            </div>
+            <div class="form-group">
+              <label for="editAuthor">Author</label>
+              <input type="text" id="editAuthor" name="author" required>
+            </div>
+            <div class="form-group">
+              <label for="editTitle">Publication Title</label>
+              <input type="text" id="editTitle" name="title" required>
+            </div>
+            <div class="form-group">
+              <label for="editJournal">Journal/Conference</label>
+              <input type="text" id="editJournal" name="journal" required>
+            </div>
+            <div class="form-group">
+              <label for="editDoi">DOI</label>
+              <input type="text" id="editDoi" name="doi" required>
+            </div>
+            <div class="form-group">
+              <label for="editImpactFactor">Impact Factor</label>
+              <input type="number" id="editImpactFactor" name="impact_factor" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="editCitations">Citations</label>
+              <input type="number" id="editCitations" name="citations" required>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="data-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-book"></i>
+            <h2>Publications Overview</h2>
+          </div>
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search publications..." id="searchInput">
+          </div>
+        </div>
+        
         <div class="table-container">
-          <table id="pubTable">
+          <table class="data-table" id="publicationsTable">
             <thead>
               <tr>
-                <th>Date of Application</th>
-                <th>Name of Faculty/Research Worker</th>
-                <th>Title of Paper</th>
-                <th>Department</th>
-                <th>Research Subsidy</th>
-                <th>Status</th>
-                <th>Local/International</th>
+                <th>Date</th>
+                <th>Author</th>
+                <th>Title</th>
+                <th>Journal/Conference</th>
+                <th>DOI</th>
+                <th>Impact Factor</th>
+                <th>Citations</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($entries as $i => $entry): ?>
-              <tr<?php if ($edit_index === $i) echo ' style="background:#ffeeba;"'; ?>>
-                <td data-label="Date of Application"><?php echo htmlspecialchars($entry[0]); ?></td>
-                <td data-label="Name of Faculty/Research Worker"><?php echo htmlspecialchars($entry[1]); ?></td>
-                <td data-label="Title of Paper"><?php echo htmlspecialchars($entry[2]); ?></td>
-                <td data-label="Department"><?php echo htmlspecialchars($entry[3]); ?></td>
-                <td data-label="Research Subsidy"><strong><?php echo htmlspecialchars($entry[4]); ?></strong></td>
-                <td data-label="Status"><span class="status <?php echo strtolower(str_replace(' ', '', $entry[5])); ?>"><?php echo htmlspecialchars($entry[5]); ?></span></td>
-                <td data-label="Local/International"><span class="tag <?php echo strtolower($entry[6]) === 'international' ? 'intl' : 'local'; ?>"><?php echo htmlspecialchars($entry[6]); ?></span></td>
-                <td>
-                  <form method="get" action="" style="display:inline;">
-                    <input type="hidden" name="edit" value="<?php echo $i; ?>">
-                    <button type="submit" class="btn">Edit</button>
-                  </form>
-                  <form method="post" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
-                    <input type="hidden" name="index" value="<?php echo $i; ?>">
-                    <button type="submit" name="delete" class="btn">Delete</button>
-                  </form>
-                </td>
-              </tr>
-              <?php if ($edit_index === $i && $edit_entry): ?>
-              <tr>
-                <td colspan="8">
-                  <form class="edit-entry-form" method="post" action="">
-                    <input type="hidden" name="save_edit" value="1">
-                    <input type="hidden" name="index" value="<?php echo $edit_index; ?>">
-                    <label>Date of Application:<br><input type="date" name="date" value="<?php echo htmlspecialchars($edit_entry[0]); ?>" required></label><br>
-                    <label>Name of Faculty/Research Worker:<br><input type="text" name="faculty" value="<?php echo htmlspecialchars($edit_entry[1]); ?>" required></label><br>
-                    <label>Title of Paper:<br><input type="text" name="title" value="<?php echo htmlspecialchars($edit_entry[2]); ?>" required></label><br>
-                    <label>Department:<br><input type="text" name="department" value="<?php echo htmlspecialchars($edit_entry[3]); ?>" required></label><br>
-                    <label>Research Subsidy:<br><input type="text" name="subsidy" value="<?php echo htmlspecialchars($edit_entry[4]); ?>" required></label><br>
-                    <label>Status:<br>
-                      <select name="status" required>
-                        <option value="Approved" <?php if ($edit_entry[5]==='Approved') echo 'selected'; ?>>Approved</option>
-                        <option value="Under Review" <?php if ($edit_entry[5]==='Under Review') echo 'selected'; ?>>Under Review</option>
-                        <option value="Rejected" <?php if ($edit_entry[5]==='Rejected') echo 'selected'; ?>>Rejected</option>
-                      </select>
-                    </label><br>
-                    <label>Local/International:<br>
-                      <select name="locality" required>
-                        <option value="Local" <?php if ($edit_entry[6]==='Local') echo 'selected'; ?>>Local</option>
-                        <option value="International" <?php if ($edit_entry[6]==='International') echo 'selected'; ?>>International</option>
-                      </select>
-                    </label><br>
-                    <button type="submit" class="btn">Save Changes</button>
-                  </form>
-                </td>
-              </tr>
+              <?php if (empty($entries)): ?>
+                <tr class="empty-state">
+                  <td colspan="8">
+                    <div class="empty-content">
+                      <i class="fas fa-book"></i>
+                      <h3>No publications found</h3>
+                      <p>Add your first publication to get started</p>
+                      <button class="btn btn-primary" id="addFirstBtn">
+                        <i class="fas fa-plus"></i>
+                        Add Publication
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <?php else: ?>
+                <?php foreach ($entries as $i => $entry): ?>
+                <tr data-index="<?php echo $i; ?>">
+                  <td data-label="Date">
+                    <span class="date-info"><?php echo htmlspecialchars($entry[0]); ?></span>
+                  </td>
+                  <td data-label="Author">
+                    <div class="author-info">
+                      <strong><?php echo htmlspecialchars($entry[1]); ?></strong>
+                    </div>
+                  </td>
+                  <td data-label="Title">
+                    <div class="title-content">
+                      <h4><?php echo htmlspecialchars($entry[2]); ?></h4>
+                    </div>
+                  </td>
+                  <td data-label="Journal/Conference">
+                    <span class="journal-info"><?php echo htmlspecialchars($entry[3]); ?></span>
+                  </td>
+                  <td data-label="DOI">
+                    <span class="doi-info"><?php echo htmlspecialchars($entry[4]); ?></span>
+                  </td>
+                  <td data-label="Impact Factor">
+                    <span class="impact-factor"><?php echo htmlspecialchars($entry[5]); ?></span>
+                  </td>
+                  <td data-label="Citations">
+                    <span class="citations-count"><?php echo htmlspecialchars($entry[6]); ?></span>
+                  </td>
+                  <td data-label="Actions">
+                    <div class="action-buttons">
+                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
+                              data-date="<?php echo htmlspecialchars($entry[0]); ?>"
+                              data-author="<?php echo htmlspecialchars($entry[1]); ?>"
+                              data-title="<?php echo htmlspecialchars($entry[2]); ?>"
+                              data-journal="<?php echo htmlspecialchars($entry[3]); ?>"
+                              data-doi="<?php echo htmlspecialchars($entry[4]); ?>"
+                              data-impact-factor="<?php echo htmlspecialchars($entry[5]); ?>"
+                              data-citations="<?php echo htmlspecialchars($entry[6]); ?>">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
+                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <button type="submit" name="delete" class="action-btn delete-btn">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
               <?php endif; ?>
-              <?php endforeach; ?>
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  </div>
-  <script>
-    document.getElementById('showAddForm').onclick = function() {
-      document.getElementById('addEntryForm').style.display = 'block';
-    };
-    document.getElementById('cancelAddForm').onclick = function() {
-      document.getElementById('addEntryForm').style.display = 'none';
-    };
-    function filterTable() {
-      var input = document.querySelector('.search-bar');
-      var filter = input.value.toLowerCase();
-      var table = document.getElementById('pubTable');
-      var trs = table.getElementsByTagName('tr');
-      for (var i = 1; i < trs.length; i++) {
-        var tds = trs[i].getElementsByTagName('td');
-        // Only filter data rows (8 columns), skip edit form rows (colspan=8)
-        if (tds.length === 8) {
-          var show = false;
-          for (var j = 0; j < tds.length - 1; j++) { // Exclude Actions column if you want
-            if (tds[j].textContent.toLowerCase().indexOf(filter) > -1) {
-              show = true;
-              break;
-            }
-          }
-          trs[i].style.display = show ? '' : 'none';
-          // Also hide the edit form row if its data row is hidden
-          if (trs[i + 1] && trs[i + 1].querySelector('.edit-entry-form')) {
-            trs[i + 1].style.display = show ? '' : 'none';
-          }
-        }
-      }
+  </main>
+
+  <style>
+    .date-info {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
     }
+    
+    .author-info strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    .title-content h4 {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    
+    .journal-info {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    
+    .doi-info {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.75rem;
+      color: #0369a1;
+      background: #f0f9ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .impact-factor {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .citations-count {
+      background: #dcfce7;
+      color: #166534;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  </style>
+
+  <script src="../js/theme.js"></script>
+  <script>
+    // Profile menu toggle
     const profileMenu = document.getElementById('profileMenu');
-    const profileIconBtn = document.getElementById('profileIconBtn');
+    const profileBtn = document.getElementById('profileBtn');
     const profileDropdown = document.getElementById('profileDropdown');
-    document.addEventListener('click', function(e) {
-      if (profileMenu.contains(e.target)) {
-        profileMenu.classList.toggle('open');
-      } else {
+
+    profileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!profileMenu.contains(e.target)) {
         profileMenu.classList.remove('open');
       }
+    });
+
+    // Modal functionality
+    const addModal = document.getElementById('addModal');
+    const editModal = document.getElementById('editModal');
+    const addBtn = document.getElementById('addBtn');
+    const addFirstBtn = document.getElementById('addFirstBtn');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const cancelAdd = document.getElementById('cancelAdd');
+    const cancelEdit = document.getElementById('cancelEdit');
+
+    function openModal(modal) {
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+
+    addBtn.addEventListener('click', () => openModal(addModal));
+    if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
+    closeAddModal.addEventListener('click', () => closeModal(addModal));
+    cancelAdd.addEventListener('click', () => closeModal(addModal));
+    closeEditModal.addEventListener('click', () => closeModal(editModal));
+    cancelEdit.addEventListener('click', () => closeModal(editModal));
+
+    // Close modal when clicking outside
+    [addModal, editModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal(modal);
+        }
+      });
+    });
+
+    // Edit functionality
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.edit-btn')) {
+        const btn = e.target.closest('.edit-btn');
+        const index = btn.dataset.index;
+        const date = btn.dataset.date;
+        const author = btn.dataset.author;
+        const title = btn.dataset.title;
+        const journal = btn.dataset.journal;
+        const doi = btn.dataset.doi;
+        const impactFactor = btn.dataset.impactFactor;
+        const citations = btn.dataset.citations;
+
+        document.getElementById('editIndex').value = index;
+        document.getElementById('editDate').value = date;
+        document.getElementById('editAuthor').value = author;
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editJournal').value = journal;
+        document.getElementById('editDoi').value = doi;
+        document.getElementById('editImpactFactor').value = impactFactor;
+        document.getElementById('editCitations').value = citations;
+
+        openModal(editModal);
+      }
+    });
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const tableRows = document.querySelectorAll('#publicationsTable tbody tr');
+
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      
+      tableRows.forEach(row => {
+        if (row.classList.contains('empty-state')) return;
+        
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // Upload button (placeholder)
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      alert('Upload functionality will be implemented here');
     });
   </script>
 </body>

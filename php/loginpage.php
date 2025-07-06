@@ -86,10 +86,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_type'] = $is_admin ? 'admin' : $user_type;
             $_SESSION['user_full_name'] = $user_full_name;
             $_SESSION['user_department'] = $user_department;
+            // Load profile picture from users.csv
+            $profile_pic = '../pics/rso-bg.png';
+            if (!$is_admin && file_exists($users_file)) {
+                $file = fopen($users_file, 'r');
+                while (($data = fgetcsv($file)) !== false) {
+                    if ($data[0] === $email) {
+                        if (isset($data[5]) && $data[5]) {
+                            $profile_pic = $data[5];
+                        }
+                        break;
+                    }
+                }
+                fclose($file);
+            }
+            $_SESSION['profile_picture'] = $profile_pic;
             if ($is_admin) {
                 $_SESSION['admin_logged_in'] = true;
                 header('Location: manage_faculty.php');
-            
             } else {
                 header('Location: ../index.php');
             }
@@ -104,91 +118,216 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login page Research Management System</title>
-    <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/login.css">
+    <title>Login - RSO Research Management System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/modern-theme.css">
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-   
+    <!-- Theme Toggle for Login Page -->
+    <button class="theme-toggle" title="Toggle Theme" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <i class="fas fa-moon"></i>
+    </button>
+    
     <div class="login-container">
-        <div class="logo">
-            <img src="../pics/rso-bg.png" alt="UC Logo">
-            <h1>RSO Research Management System</h1>
-        </div>
-        <div id="login-section" style="display:<?php echo ($register_success || isset($_POST['register'])) ? 'none' : 'block'; ?>;">
-            <?php if ($login_error): ?>
-            <div class="login-error" style="color:red; margin-bottom:10px; text-align:center;"> <?php echo htmlspecialchars($login_error); ?> </div>
-            <?php endif; ?>
-            <?php if ($register_success): ?>
-            <div class="login-success" style="color:green; margin-bottom:10px; text-align:center;"> <?php echo htmlspecialchars($register_success); ?> </div>
-            <?php endif; ?>
-            <form id="loginForm" method="post" action="">
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="text" id="email" name="email" required placeholder="Enter your email or username" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required placeholder="Enter your password">
-                </div>
-                <button type="submit" class="login-btn">Login</button>
-            </form>
-            <div class="forgot-password">
-                <a href="#">Forgot Password?</a>
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="../pics/rso-bg.png" alt="UC Logo">
+                <h1>RSO Research Management System</h1>
             </div>
-            <div style="text-align:center; margin-top:10px;">
-                <a href="#" onclick="showRegister(); return false;">Create Account</a>
+            
+            <div class="login-tabs">
+                <button class="login-tab active" id="loginTab">Login</button>
+                <button class="login-tab" id="registerTab">Register</button>
             </div>
-        </div>
-        <div id="register-section" style="display:<?php echo ($register_success || isset($_POST['register'])) ? 'block' : 'none'; ?>;">
-            <div class="user-type-selector">
-                <button class="user-type-btn<?php if (empty($_POST['reg_user_type']) || $_POST['reg_user_type'] === 'faculty') echo ' active'; ?>" type="button" onclick="selectRegUserType(this, 'faculty')">Faculty Member</button>
-                <button class="user-type-btn<?php if (!empty($_POST['reg_user_type']) && $_POST['reg_user_type'] === 'rso') echo ' active'; ?>" type="button" onclick="selectRegUserType(this, 'rso')">RSO Member</button>
+            
+            <!-- Login Form -->
+            <div class="login-form active" id="loginForm">
+                <?php if ($login_error): ?>
+                    <div class="form-error"><?php echo htmlspecialchars($login_error); ?></div>
+                <?php endif; ?>
+                <?php if ($register_success): ?>
+                    <div class="form-success"><?php echo htmlspecialchars($register_success); ?></div>
+                <?php endif; ?>
+                
+                <form method="post" action="">
+                    <div class="form-group">
+                        <label for="email">Email or Username</label>
+                        <input type="text" id="email" name="email" required placeholder="Enter your email or username" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="Enter your password">
+                    </div>
+                    <button type="submit" class="login-btn">Login</button>
+                </form>
+                
+                <div class="forgot-password">
+                    <a href="#">Forgot Password?</a>
+                </div>
             </div>
-            <?php if ($register_error): ?>
-            <div class="login-error" style="color:red; margin-bottom:10px; text-align:center;"> <?php echo htmlspecialchars($register_error); ?> </div>
-            <?php endif; ?>
-            <form id="registerForm" method="post" action="">
-                <input type="hidden" name="reg_user_type" id="reg_user_type" value="<?php echo !empty($_POST['reg_user_type']) ? htmlspecialchars($_POST['reg_user_type']) : 'faculty'; ?>">
-                <div class="form-group">
-                    <label for="reg_full_name">Full Name</label>
-                    <input type="text" id="reg_full_name" name="reg_full_name" required placeholder="Enter your full name" value="<?php echo isset($_POST['reg_full_name']) ? htmlspecialchars($_POST['reg_full_name']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="reg_department">Department</label>
-                    <input type="text" id="reg_department" name="reg_department" required placeholder="Enter your department" value="<?php echo isset($_POST['reg_department']) ? htmlspecialchars($_POST['reg_department']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="reg_email">Email</label>
-                    <input type="email" id="reg_email" name="reg_email" required placeholder="Enter your email" value="<?php echo isset($_POST['reg_email']) ? htmlspecialchars($_POST['reg_email']) : ''; ?>">
-                </div>
-                <div class="form-group">
-                    <label for="reg_password">Password</label>
-                    <input type="password" id="reg_password" name="reg_password" required placeholder="Enter your password">
-                </div>
-                <button type="submit" name="register" class="login-btn">Create Account</button>
-            </form>
-            <div style="text-align:center; margin-top:10px;">
-                <a href="#" onclick="showLogin(); return false;">Back to Login</a>
+            
+            <!-- Register Form -->
+            <div class="login-form" id="registerForm">
+                <?php if ($register_error): ?>
+                    <div class="form-error"><?php echo htmlspecialchars($register_error); ?></div>
+                <?php endif; ?>
+                
+                <form method="post" action="">
+                    <input type="hidden" name="reg_user_type" id="reg_user_type" value="faculty">
+                    
+                    <div class="form-group">
+                        <label for="reg_full_name">Full Name</label>
+                        <input type="text" id="reg_full_name" name="reg_full_name" required placeholder="Enter your full name" value="<?php echo isset($_POST['reg_full_name']) ? htmlspecialchars($_POST['reg_full_name']) : ''; ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg_department">Department</label>
+                        <input type="text" id="reg_department" name="reg_department" required placeholder="Enter your department" value="<?php echo isset($_POST['reg_department']) ? htmlspecialchars($_POST['reg_department']) : ''; ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg_email">Email</label>
+                        <input type="email" id="reg_email" name="reg_email" required placeholder="Enter your email" value="<?php echo isset($_POST['reg_email']) ? htmlspecialchars($_POST['reg_email']) : ''; ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg_password">Password</label>
+                        <input type="password" id="reg_password" name="reg_password" required placeholder="Enter your password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>User Type</label>
+                        <div class="user-type-selector">
+                            <button type="button" class="user-type-btn active" data-type="faculty">
+                                <i class="fas fa-user-graduate"></i>
+                                Faculty Member
+                            </button>
+                            <button type="button" class="user-type-btn" data-type="rso">
+                                <i class="fas fa-users"></i>
+                                RSO Member
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" name="register" class="login-btn">Create Account</button>
+                </form>
             </div>
         </div>
     </div>
+
+    <style>
+        .user-type-selector {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        
+        .user-type-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 12px;
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .user-type-btn:hover {
+            border-color: var(--btn-primary-bg);
+            color: var(--btn-primary-bg);
+        }
+        
+        .user-type-btn.active {
+            border-color: var(--btn-primary-bg);
+            background: var(--bg-tertiary);
+            color: var(--btn-primary-bg);
+        }
+        
+        .user-type-btn i {
+            font-size: 1.25rem;
+        }
+        
+        .login-tabs {
+            display: flex;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .login-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+            font-size: 1rem;
+        }
+        
+        .login-tab.active {
+            color: var(--btn-primary-bg);
+            border-bottom-color: var(--btn-primary-bg);
+        }
+        
+        .login-form {
+            display: none;
+        }
+        
+        .login-form.active {
+            display: block;
+        }
+    </style>
+
+    <script src="../js/theme.js"></script>
     <script>
-        function selectRegUserType(button, type) {
-            document.querySelectorAll('#register-section .user-type-btn').forEach(btn => {
-                btn.classList.remove('active');
+        // Tab switching
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const regUserTypeInput = document.getElementById('reg_user_type');
+        
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.classList.add('active');
+            registerForm.classList.remove('active');
+        });
+        
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('active');
+            loginTab.classList.remove('active');
+            registerForm.classList.add('active');
+            loginForm.classList.remove('active');
+        });
+        
+        // User type selection
+        const userTypeBtns = document.querySelectorAll('.user-type-btn');
+        userTypeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                userTypeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                regUserTypeInput.value = btn.dataset.type;
             });
-            button.classList.add('active');
-            document.getElementById('reg_user_type').value = type;
-        }
-        function showRegister() {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('register-section').style.display = 'block';
-        }
-        function showLogin() {
-            document.getElementById('register-section').style.display = 'none';
-            document.getElementById('login-section').style.display = 'block';
-        }
+        });
+        
+        // Auto-switch to register tab if there's a register error
+        <?php if ($register_error): ?>
+        registerTab.click();
+        <?php endif; ?>
     </script>
 </body>
 </html> 
