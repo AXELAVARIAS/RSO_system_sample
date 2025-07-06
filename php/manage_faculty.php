@@ -337,13 +337,14 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         .custom-sidebar {
             width: 230px;
             min-height: 100vh;
-            background: linear-gradient(180deg, #1e3557 0%, #274472 100%);
-            color: #fff;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
             position: fixed;
             left: 0; top: 0; bottom: 0;
             z-index: 100;
             display: flex;
             flex-direction: column;
+            border-right: 1px solid var(--border-primary);
         }
         .custom-sidebar .logo {
             font-size: 1.5rem;
@@ -355,27 +356,29 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             align-items: center;
             justify-content: center;
             gap: 12px;
+            color: var(--text-primary);
         }
         .custom-sidebar nav {
             flex: 1;
         }
         .custom-sidebar .nav-link {
-            color: #b8c6e0;
+            color: var(--text-secondary);
             padding: 14px 32px;
             font-size: 1.08rem;
             border-left: 4px solid transparent;
             transition: all 0.2s;
+            text-decoration: none;
         }
         .custom-sidebar .nav-link.active, .custom-sidebar .nav-link:hover {
-            color: #fff;
-            background: #22335a;
-            border-left: 4px solid #4fc3f7;
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--btn-primary-bg);
         }
         .custom-sidebar .sidebar-footer {
             padding: 18px 32px;
-            border-top: 1px solid #2c4066;
+            border-top: 1px solid var(--border-primary);
             font-size: 0.97rem;
-            color: #b8c6e0;
+            color: var(--text-secondary);
         }
         .custom-topbar {
             margin-left: 230px;
@@ -388,6 +391,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             position: sticky;
             top: 0;
             z-index: 101;
+            border-bottom: 1px solid var(--border-primary);
         }
         .custom-topbar .page-title {
             font-size: 1.3rem;
@@ -398,10 +402,23 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             margin-left: auto;
             margin-right: 18px;
         }
+        .custom-topbar .search-bar input {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+        }
+        .custom-topbar .search-bar input:focus {
+            border-color: var(--input-focus-border);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+        }
+        .custom-topbar .search-bar input::placeholder {
+            color: var(--input-placeholder);
+        }
         .custom-topbar .user-info {
             display: flex;
             align-items: center;
             gap: 10px;
+            color: var(--text-primary);
         }
         .custom-topbar .user-info img {
             width: 36px; height: 36px; border-radius: 50%;
@@ -411,10 +428,10 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             padding: 32px 24px 24px 24px;
         }
         .welcome-card {
-            background: linear-gradient(90deg, #4fc3f7 0%, #1976d2 100%);
-            color: #fff;
+            background: linear-gradient(90deg, var(--btn-primary-bg) 0%, var(--btn-primary-hover) 100%);
+            color: var(--text-inverse);
             border-radius: 14px;
-            box-shadow: 0 2px 12px rgba(30,53,87,0.07);
+            box-shadow: var(--shadow-md);
             padding: 32px 32px 24px 32px;
             margin-bottom: 32px;
             display: flex;
@@ -443,48 +460,166 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             box-shadow: var(--shadow-md);
             background: var(--bg-card);
             padding: 0;
+            border: 1px solid var(--border-primary);
         }
         .card-custom .card-header {
-            background: #22335a;
-            color: #fff;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             border-radius: 12px 12px 0 0;
             font-weight: 600;
             font-size: 1.1rem;
             padding: 18px 24px;
+            border-bottom: 1px solid var(--border-primary);
         }
         .card-custom .card-body {
             padding: 24px;
+            background: var(--bg-card);
+        }
+        .table {
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
         .table thead th {
             background: var(--bg-tertiary);
             color: var(--text-primary);
             font-weight: 600;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .table tbody tr {
+            background: var(--bg-card);
+        }
+        .table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+        .table tbody td {
+            border-top: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background: var(--bg-secondary);
+        }
+        .table-striped tbody tr:nth-of-type(odd):hover {
+            background: var(--bg-tertiary);
+        }
+        .table-warning {
+            background: rgba(255, 193, 7, 0.1) !important;
+        }
+        [data-theme="dark"] .table-warning {
+            background: rgba(255, 193, 7, 0.2) !important;
         }
         .btn-custom {
-            background: #4fc3f7;
-            color: #fff;
+            background: var(--btn-primary-bg);
+            color: var(--text-inverse);
             border: none;
             border-radius: 6px;
             padding: 6px 16px;
             font-size: 1rem;
             transition: background 0.2s;
         }
-        .btn-custom:hover { background: #1976d2; color: #fff; }
+        .btn-custom:hover { 
+            background: var(--btn-primary-hover); 
+            color: var(--text-inverse); 
+        }
+        .btn-secondary {
+            background: var(--btn-secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+        .btn-secondary:hover {
+            background: var(--btn-secondary-hover);
+            color: var(--text-primary);
+        }
+        .btn-danger {
+            background: var(--btn-danger-bg);
+            color: var(--text-inverse);
+        }
+        .btn-danger:hover {
+            background: var(--btn-danger-hover);
+            color: var(--text-inverse);
+        }
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+        }
+        .form-control:focus {
+            background: var(--input-bg);
+            border-color: var(--input-focus-border);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+        }
+        .form-control::placeholder {
+            color: var(--input-placeholder);
+        }
+        .form-select {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+        }
+        .form-select:focus {
+            background: var(--input-bg);
+            border-color: var(--input-focus-border);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+        }
+        .alert {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--status-approved);
+            color: var(--status-approved);
+        }
+        [data-theme="dark"] .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+        }
         html { scroll-behavior: smooth; }
         #faculty-accounts, #data-tools, #kpi-records, #ethics-protocols, #publication-presentation, #research-capacity {
             scroll-margin-top: 90px;
         }
         .nav-link.active {
-            background: #22335a !important;
-            color: #fff !important;
-            border-left: 4px solid #4fc3f7;
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            border-left: 4px solid var(--btn-primary-bg);
             font-weight: bold;
         }
         .highlight-search {
-            background: yellow;
-            color: #222;
+            background: #fbbf24;
+            color: #1f2937;
             border-radius: 3px;
             padding: 0 2px;
+        }
+        [data-theme="dark"] .highlight-search {
+            background: #f59e0b;
+            color: #ffffff;
+        }
+        /* Theme toggle button styling */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 15px;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-secondary);
+        }
+        .theme-toggle i {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+        .theme-toggle:hover i {
+            color: var(--text-primary);
         }
     </style>
     <script>
@@ -672,7 +807,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             <span><?php echo htmlspecialchars($_SESSION['user_full_name'] ?? 'Admin'); ?></span>
         </div>
         <!-- Theme Toggle -->
-        <button class="theme-toggle" title="Toggle Theme" style="margin-left: 15px;">
+        <button class="theme-toggle" title="Toggle Theme">
             <i class="fas fa-moon"></i>
         </button>
     </div>
