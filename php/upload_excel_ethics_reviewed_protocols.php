@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         }
         
         // Validate header row
-        $expected_headers = ['Faculty Name', 'Degree', 'Sex', 'Research Title', 'Ownership', 'Presented At', 'Published Date', 'Journal/Publication'];
+        $expected_headers = ['Protocol Number', 'Research Title', 'Department', 'Status', 'Action Taken'];
         $first_row = $data[0];
         // Remove BOM from first header if present
         if (isset($first_row[0])) {
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             $header_clean = strtolower(str_replace([' ', '_', '/'], '', $header));
             $header_map[$header_clean] = $idx;
         }
-        // Check for at least 6/8 required headers
+        // Check for at least 4/5 required headers (allow some flexibility)
         $header_matches = 0;
         foreach ($expected_headers as $expected) {
             $expected_clean = strtolower(str_replace([' ', '_', '/'], '', $expected));
@@ -112,8 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 $header_matches++;
             }
         }
-        if ($header_matches < 6) {
-            $response['message'] = 'Invalid file format. Expected columns: Faculty Name, Degree, Sex, Research Title, Ownership, Presented At, Published Date, Journal/Publication';
+        if ($header_matches < 4) {
+            $response['message'] = 'Invalid file format. Expected columns: Protocol Number, Research Title, Department, Status, Action Taken';
             echo json_encode($response);
             exit;
         }
@@ -132,47 +132,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 continue;
             }
             // Get and trim all values
-            $faculty = get_col($row, $header_map, 'Faculty Name');
-            $degree = get_col($row, $header_map, 'Degree');
-            $sex = get_col($row, $header_map, 'Sex');
+            $protocol_number = get_col($row, $header_map, 'Protocol Number');
             $title = get_col($row, $header_map, 'Research Title');
-            $ownership = get_col($row, $header_map, 'Ownership');
-            $presented = get_col($row, $header_map, 'Presented At');
-            $published = get_col($row, $header_map, 'Published Date');
-            $journal = get_col($row, $header_map, 'Journal/Publication');
+            $department = get_col($row, $header_map, 'Department');
+            $status = get_col($row, $header_map, 'Status');
+            $action_taken = get_col($row, $header_map, 'Action Taken');
             // Validate required fields
-            if ($faculty === '' || $degree === '' || $sex === '' || $title === '' || $ownership === '' || $presented === '' || $published === '' || $journal === '') {
+            if ($protocol_number === '' || $title === '' || $department === '' || $status === '' || $action_taken === '') {
                 $error_count++;
                 $errors[] = "Row " . ($i + 2) . ": Missing required fields.";
                 continue;
             }
-            // Validate published date: accept YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, etc.
-            $published = trim($published);
-            $published_parsed = false;
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $published)) {
-                $published_parsed = $published;
-            } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $published)) {
-                $parts = explode('/', $published);
-                if ((int)$parts[0] > 12) {
-                    $published_parsed = $parts[2] . '-' . str_pad($parts[1],2,'0',STR_PAD_LEFT) . '-' . str_pad($parts[0],2,'0',STR_PAD_LEFT);
-                } else {
-                    $published_parsed = $parts[2] . '-' . str_pad($parts[0],2,'0',STR_PAD_LEFT) . '-' . str_pad($parts[1],2,'0',STR_PAD_LEFT);
-                }
-            } else {
-                $timestamp = strtotime($published);
-                if ($timestamp !== false) {
-                    $published_parsed = date('Y-m-d', $timestamp);
-                }
-            }
-            if (!$published_parsed) {
-                $error_count++;
-                $errors[] = "Row " . ($i + 2) . ": Invalid published date format (got '$published').";
-                continue;
-            }
             try {
                 $db->query(
-                    "INSERT INTO data_collection_tools (researcher_name, degree, gender, research_title, role, location, submission_date, research_area) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [$faculty, $degree, $sex, $title, $ownership, $presented, $published_parsed, $journal]
+                    "INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)",
+                    [$protocol_number, $title, $department, $status, $action_taken]
                 );
                 $success_count++;
             } catch (Exception $e) {

@@ -343,87 +343,98 @@ if (isset($_GET['edit'])) {
         </div>
         
         <div class="table-container">
-          <table class="data-table" id="publicationsTable">
-            <thead>
-              <tr>
-                <th>Date OF Application</th>
-                <th>Name(s) of faculty/research worker</th>
-                <th>Title of Paper</th>
-                <th>Department</th>
-                <th>Research Subsidy</th>
-                <th>Status</th>
-                <th>Local/International</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php if (empty($entries)): ?>
-                <tr class="empty-state">
-                  <td colspan="8">
-                    <div class="empty-content">
-                      <i class="fas fa-book"></i>
-                      <h3>No publications found</h3>
-                      <p>Add your first publication to get started</p>
-                      <button class="btn btn-primary" id="addFirstBtn">
-                        <i class="fas fa-plus"></i>
-                        Add Publication
-                      </button>
-                    </div>
-                  </td>
+          <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected publications?');">
+            <div class="bulk-delete-bar">
+              <div class="select-all-container">
+                <input type="checkbox" id="selectAll" class="styled-checkbox">
+                <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
+              </div>
+              <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+            </div>
+            <table class="data-table" id="publicationsTable">
+              <thead>
+                <tr>
+                  <th style="width:32px;"></th>
+                  <th>Date OF Application</th>
+                  <th>Name(s) of faculty/research worker</th>
+                  <th>Title of Paper</th>
+                  <th>Department</th>
+                  <th>Research Subsidy</th>
+                  <th>Status</th>
+                  <th>Local/International</th>
+                  <th>Actions</th>
                 </tr>
-              <?php else: ?>
-                <?php foreach ($entries as $i => $entry): ?>
-                <tr data-id="<?php echo $entry['id']; ?>">
-                  <td data-label="Date OF Application">
-                    <span class="date-info"><?php echo htmlspecialchars($entry['application_date']); ?></span>
-                  </td>
-                  <td data-label="Name(s) of faculty/research worker">
-                    <div class="author-info">
-                      <strong><?php echo htmlspecialchars($entry['author_name']); ?></strong>
-                    </div>
-                  </td>
-                  <td data-label="Title of Paper">
-                    <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry['paper_title']); ?></h4>
-                    </div>
-                  </td>
-                  <td data-label="Department">
-                    <span class="journal-info"><?php echo htmlspecialchars($entry['department']); ?></span>
-                  </td>
-                  <td data-label="Research Subsidy">
-                    <span class="impact-factor"><?php echo htmlspecialchars($entry['research_subsidy']); ?></span>
-                  </td>
-                  <td data-label="Status">
-                    <span class="citations-count"><?php echo htmlspecialchars($entry['status']); ?></span>
-                  </td>
-                  <td data-label="Local/International">
-                    <span class="citations-count"><?php echo htmlspecialchars($entry['scope']); ?></span>
-                  </td>
-                  <td data-label="Actions">
-                    <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
-                              data-date="<?php echo htmlspecialchars($entry['application_date']); ?>"
-                              data-author="<?php echo htmlspecialchars($entry['author_name']); ?>"
-                              data-title="<?php echo htmlspecialchars($entry['paper_title']); ?>"
-                              data-department="<?php echo htmlspecialchars($entry['department']); ?>"
-                              data-subsidy="<?php echo htmlspecialchars($entry['research_subsidy']); ?>"
-                              data-status="<?php echo htmlspecialchars($entry['status']); ?>"
-                              data-local-international="<?php echo htmlspecialchars($entry['scope']); ?>">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
-                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
-                        <button type="submit" name="delete" class="action-btn delete-btn">
-                          <i class="fas fa-trash"></i>
+              </thead>
+              <tbody>
+                <?php if (empty($entries)): ?>
+                  <tr class="empty-state">
+                    <td colspan="9">
+                      <div class="empty-content">
+                        <i class="fas fa-book"></i>
+                        <h3>No publications found</h3>
+                        <p>Add your first publication to get started</p>
+                        <button class="btn btn-primary" id="addFirstBtn">
+                          <i class="fas fa-plus"></i>
+                          Add Publication
                         </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
-            </tbody>
-          </table>
+                      </div>
+                    </td>
+                  </tr>
+                <?php else: ?>
+                  <?php foreach ($entries as $i => $entry): ?>
+                  <tr data-id="<?php echo $entry['id']; ?>">
+                    <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
+                    <td data-label="Date OF Application">
+                      <span class="date-info"><?php echo htmlspecialchars($entry['application_date']); ?></span>
+                    </td>
+                    <td data-label="Name(s) of faculty/research worker">
+                      <div class="author-info">
+                        <strong><?php echo htmlspecialchars($entry['author_name']); ?></strong>
+                      </div>
+                    </td>
+                    <td data-label="Title of Paper">
+                      <div class="title-content">
+                        <h4><?php echo htmlspecialchars($entry['paper_title']); ?></h4>
+                      </div>
+                    </td>
+                    <td data-label="Department">
+                      <span class="journal-info"><?php echo htmlspecialchars($entry['department']); ?></span>
+                    </td>
+                    <td data-label="Research Subsidy">
+                      <span class="impact-factor"><?php echo htmlspecialchars($entry['research_subsidy']); ?></span>
+                    </td>
+                    <td data-label="Status">
+                      <span class="citations-count"><?php echo htmlspecialchars($entry['status']); ?></span>
+                    </td>
+                    <td data-label="Local/International">
+                      <span class="citations-count"><?php echo htmlspecialchars($entry['scope']); ?></span>
+                    </td>
+                    <td data-label="Actions">
+                      <div class="action-buttons">
+                        <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                                data-date="<?php echo htmlspecialchars($entry['application_date']); ?>"
+                                data-author="<?php echo htmlspecialchars($entry['author_name']); ?>"
+                                data-title="<?php echo htmlspecialchars($entry['paper_title']); ?>"
+                                data-department="<?php echo htmlspecialchars($entry['department']); ?>"
+                                data-subsidy="<?php echo htmlspecialchars($entry['research_subsidy']); ?>"
+                                data-status="<?php echo htmlspecialchars($entry['status']); ?>"
+                                data-local-international="<?php echo htmlspecialchars($entry['scope']); ?>">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
+                          <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
+                          <button type="submit" name="delete" class="action-btn delete-btn">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </form>
         </div>
       </div>
     </div>
@@ -471,6 +482,82 @@ if (isset($_GET['edit'])) {
       border-radius: 0;
       font-size: inherit;
       font-weight: inherit;
+    }
+
+    /* Hide checkboxes by default */
+    .data-table .styled-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .data-table tr:hover .styled-checkbox,
+    .data-table tr:focus-within .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .data-table .styled-checkbox:checked {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #bulkDeleteForm.show-all-checkboxes .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Hide select-all container by default */
+    #bulkDeleteForm .select-all-container {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes .select-all-container {
+      display: flex !important;
+      align-items: center;
+    }
+
+    /* Hide bulk delete button by default */
+    #bulkDeleteBtn {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
+      display: inline-block;
+    }
+
+    /* Custom styled checkbox */
+    .styled-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #232e3e;
+      border: 2px solid #4285f4;
+      border-radius: 6px;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: inline-block;
+      vertical-align: middle;
+      position: relative;
+    }
+    .styled-checkbox:focus {
+      box-shadow: 0 0 0 2px #4285f455;
+      border-color: #4285f4;
+    }
+    .styled-checkbox:checked {
+      background-color: #4285f4;
+      border-color: #4285f4;
+    }
+    .styled-checkbox:checked::after {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 8px;
+      height: 14px;
+      border: solid #fff;
+      border-width: 0 3px 3px 0;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      box-sizing: border-box;
     }
   </style>
 
@@ -618,6 +705,46 @@ if (isset($_GET['edit'])) {
     document.getElementById('uploadBtn').addEventListener('click', () => {
       alert('Upload functionality will be implemented here');
     });
+
+    // Bulk delete button enable/disable and show-all-checkboxes logic
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+    function updateBulkDeleteBtn() {
+      let checkedCount = 0;
+      rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+      if (checkedCount > 0) {
+        bulkDeleteBtn.disabled = false;
+        bulkDeleteForm.classList.add('show-all-checkboxes');
+      } else {
+        bulkDeleteBtn.disabled = true;
+        bulkDeleteForm.classList.remove('show-all-checkboxes');
+      }
+      // Update selectAll checkbox state
+      if (selectAll) {
+        if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
+          selectAll.checked = true;
+          selectAll.indeterminate = false;
+        } else if (checkedCount > 0) {
+          selectAll.checked = false;
+          selectAll.indeterminate = true;
+        } else {
+          selectAll.checked = false;
+          selectAll.indeterminate = false;
+        }
+      }
+    }
+    rowCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkDeleteBtn);
+    });
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+        updateBulkDeleteBtn();
+      });
+    }
+    updateBulkDeleteBtn();
   </script>
 </body>
 </html> 

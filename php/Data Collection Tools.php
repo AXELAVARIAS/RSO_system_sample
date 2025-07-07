@@ -17,13 +17,32 @@ if (isset($_POST['logout'])) {
 $success_message = '';
 $error_message = '';
 
+// Handle GET messages from upload
+if (isset($_GET['success'])) {
+    $success_message = $_GET['success'];
+}
+if (isset($_GET['error'])) {
+    $error_message = $_GET['error'];
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $db = getDB();
         
+        // Handle bulk delete
+        if (isset($_POST['bulk_delete']) && !empty($_POST['selected_ids']) && is_array($_POST['selected_ids'])) {
+            $ids = array_map('intval', $_POST['selected_ids']);
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $db->query("DELETE FROM data_collection_tools WHERE id IN ($placeholders)", $ids);
+                $success_message = count($ids) . ' entries deleted successfully!';
+            } else {
+                $error_message = 'No entries selected for deletion.';
+            }
+        }
         // Handle delete
-        if (isset($_POST['delete']) && isset($_POST['id'])) {
+        elseif (isset($_POST['delete']) && isset($_POST['id'])) {
             $id = (int)$_POST['id'];
             $db->query("DELETE FROM data_collection_tools WHERE id = ?", [$id]);
             $success_message = 'Entry deleted successfully!';
@@ -361,6 +380,52 @@ if (isset($_GET['edit'])) {
         </div>
       </div>
 
+      <!-- Upload Excel Modal -->
+      <div class="modal" id="uploadModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Upload Excel File</h3>
+            <button class="modal-close" id="closeUploadModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" id="uploadExcelForm" enctype="multipart/form-data">
+            <ul style="margin-bottom:1em;">
+              <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
+              <li>File should contain these columns (in any order):
+                <ul style="margin-top:0.3em;">
+                  <li><b>Faculty Name</b></li>
+                  <li><b>Degree</b> <span style="color:#888;">(Ph.D., M.S., M.A., B.S., B.A.)</span></li>
+                  <li><b>Sex</b> <span style="color:#888;">(Male, Female)</span></li>
+                  <li><b>Research Title</b></li>
+                  <li><b>Ownership</b> <span style="color:#888;">(Author, Co-Author, Contributor)</span></li>
+                  <li><b>Presented At</b></li>
+                  <li><b>Published Date</b> <span style="color:#888;">(YYYY-MM-DD)</span></li>
+                  <li><b>Journal/Publication</b></li>
+                </ul>
+              </li>
+              <li>First row should contain column headers</li>
+              <li>Maximum file size: 5MB</li>
+            </ul>
+            <a href="download_template_data_collection_tools.php" target="_blank" style="margin-bottom:1em;display:inline-block;">Download Template</a>
+            <div class="form-group" style="margin-top:1em;">
+              <label for="excelFile" style="font-weight:600;">Select File</label>
+              <input type="file" id="excelFile" name="excel_file" accept=".xls,.xlsx,.csv" required>
+              <div id="fileInfo" style="margin-top:0.5em; font-size:0.97em; color:#ccc;"></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
+              <button type="submit" class="btn btn-primary">Upload File</button>
+            </div>
+            <div id="uploadResult" style="margin-top:1em;"></div>
+            <div id="uploadLoading" style="margin-top:1em; display:none; text-align:center;">
+              <i class="fas fa-spinner fa-spin" style="font-size:1.5em;"></i>
+              <span style="margin-left:0.5em;">Uploading...</span>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Data Table -->
       <div class="data-card">
         <div class="card-header">
@@ -373,95 +438,105 @@ if (isset($_GET['edit'])) {
             <input type="text" class="search-input" placeholder="Search tools..." id="searchInput">
           </div>
         </div>
-        
-        <div class="table-container">
-          <table class="data-table" id="toolsTable">
-            <thead>
-              <tr>
-                <th>Faculty Name</th>
-                <th>Degree</th>
-                <th>Sex</th>
-                <th>Research Title</th>
-                <th>Ownership</th>
-                <th>Presented At</th>
-                <th>Published Date</th>
-                <th>Journal/Publication</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php if (empty($entries)): ?>
-                <tr class="empty-state">
-                  <td colspan="9">
-                    <div class="empty-content">
-                      <i class="fas fa-database"></i>
-                      <h3>No data collection tools found</h3>
-                      <p>Add your first data collection tool to get started</p>
-                      <button class="btn btn-primary" id="addFirstBtn">
-                        <i class="fas fa-plus"></i>
-                        Add Tool
-                      </button>
-                    </div>
-                  </td>
+        <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected entries?');">
+          <div class="bulk-delete-bar">
+            <div class="select-all-container">
+              <input type="checkbox" id="selectAll" class="styled-checkbox">
+              <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
+            </div>
+            <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="toolsTable">
+              <thead>
+                <tr>
+                  <th style="width:32px;"></th>
+                  <th>Faculty Name</th>
+                  <th>Degree</th>
+                  <th>Sex</th>
+                  <th>Research Title</th>
+                  <th>Ownership</th>
+                  <th>Presented At</th>
+                  <th>Published Date</th>
+                  <th>Journal/Publication</th>
+                  <th>Actions</th>
                 </tr>
-              <?php else: ?>
-                <?php foreach ($entries as $entry): ?>
-                <tr data-id="<?php echo $entry['id']; ?>">
-                  <td data-label="Faculty Name">
-                    <div class="faculty-info">
-                      <strong><?php echo htmlspecialchars($entry['researcher_name']); ?></strong>
-                    </div>
-                  </td>
-                  <td data-label="Degree">
-                    <?php echo htmlspecialchars($entry['degree']); ?>
-                  </td>
-                  <td data-label="Sex">
-                    <?php echo htmlspecialchars($entry['gender']); ?>
-                  </td>
-                  <td data-label="Research Title">
-                    <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry['research_title']); ?></h4>
-                    </div>
-                  </td>
-                  <td data-label="Ownership">
-                    <?php echo htmlspecialchars($entry['role']); ?>
-                  </td>
-                  <td data-label="Presented At">
-                    <span class="presentation-info"><?php echo htmlspecialchars($entry['location']); ?></span>
-                  </td>
-                  <td data-label="Published Date">
-                    <span class="date-info"><?php echo htmlspecialchars($entry['submission_date']); ?></span>
-                  </td>
-                  <td data-label="Journal/Publication">
-                    <span class="journal-info"><?php echo htmlspecialchars($entry['research_area']); ?></span>
-                  </td>
-                  <td data-label="Actions">
-                    <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
-                              data-faculty="<?php echo htmlspecialchars($entry['researcher_name']); ?>"
-                              data-degree="<?php echo htmlspecialchars($entry['degree']); ?>"
-                              data-sex="<?php echo htmlspecialchars($entry['gender']); ?>"
-                              data-title="<?php echo htmlspecialchars($entry['research_title']); ?>"
-                              data-ownership="<?php echo htmlspecialchars($entry['role']); ?>"
-                              data-presented="<?php echo htmlspecialchars($entry['location']); ?>"
-                              data-published="<?php echo htmlspecialchars($entry['submission_date']); ?>"
-                              data-journal="<?php echo htmlspecialchars($entry['research_area']); ?>">
-                        <i class="fas fa-edit"></i>
-                      </button>
-                      <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
-                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
-                        <button type="submit" name="delete" class="action-btn delete-btn">
-                          <i class="fas fa-trash"></i>
+              </thead>
+              <tbody>
+                <?php if (empty($entries)): ?>
+                  <tr class="empty-state">
+                    <td colspan="10">
+                      <div class="empty-content">
+                        <i class="fas fa-database"></i>
+                        <h3>No data collection tools found</h3>
+                        <p>Add your first data collection tool to get started</p>
+                        <button class="btn btn-primary" id="addFirstBtn">
+                          <i class="fas fa-plus"></i>
+                          Add Tool
                         </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </td>
+                  </tr>
+                <?php else: ?>
+                  <?php foreach ($entries as $entry): ?>
+                  <tr data-id="<?php echo $entry['id']; ?>">
+                    <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
+                    <td data-label="Faculty Name">
+                      <div class="faculty-info">
+                        <strong><?php echo htmlspecialchars($entry['researcher_name']); ?></strong>
+                      </div>
+                    </td>
+                    <td data-label="Degree">
+                      <?php echo htmlspecialchars($entry['degree']); ?>
+                    </td>
+                    <td data-label="Sex">
+                      <?php echo htmlspecialchars($entry['gender']); ?>
+                    </td>
+                    <td data-label="Research Title">
+                      <div class="title-content">
+                        <h4><?php echo htmlspecialchars($entry['research_title']); ?></h4>
+                      </div>
+                    </td>
+                    <td data-label="Ownership">
+                      <?php echo htmlspecialchars($entry['role']); ?>
+                    </td>
+                    <td data-label="Presented At">
+                      <span class="presentation-info"><?php echo htmlspecialchars($entry['location']); ?></span>
+                    </td>
+                    <td data-label="Published Date">
+                      <span class="date-info"><?php echo htmlspecialchars($entry['submission_date']); ?></span>
+                    </td>
+                    <td data-label="Journal/Publication">
+                      <span class="journal-info"><?php echo htmlspecialchars($entry['research_area']); ?></span>
+                    </td>
+                    <td data-label="Actions">
+                      <div class="action-buttons">
+                        <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                                data-faculty="<?php echo htmlspecialchars($entry['researcher_name']); ?>"
+                                data-degree="<?php echo htmlspecialchars($entry['degree']); ?>"
+                                data-sex="<?php echo htmlspecialchars($entry['gender']); ?>"
+                                data-title="<?php echo htmlspecialchars($entry['research_title']); ?>"
+                                data-ownership="<?php echo htmlspecialchars($entry['role']); ?>"
+                                data-presented="<?php echo htmlspecialchars($entry['location']); ?>"
+                                data-published="<?php echo htmlspecialchars($entry['submission_date']); ?>"
+                                data-journal="<?php echo htmlspecialchars($entry['research_area']); ?>">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
+                          <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
+                          <button type="submit" name="delete" class="action-btn delete-btn">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </form>
       </div>
     </div>
   </main>
@@ -484,6 +559,347 @@ if (isset($_GET['edit'])) {
     .journal-info {
       color: var(--text-secondary);
       font-size: 0.875rem;
+    }
+
+    /* Simplified Upload Modal */
+    .upload-modal-simple {
+      max-width: 400px;
+      min-width: 0;
+      width: 100%;
+      padding: 0;
+      background: var(--bg-modal);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .upload-simple-instructions {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border-left: 4px solid var(--primary-color);
+    }
+
+    .upload-simple-instructions p {
+      margin: 0 0 0.75rem 0;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .upload-simple-instructions ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .upload-simple-instructions ul ul {
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-simple-instructions li {
+      margin-bottom: 0.25rem;
+    }
+
+    .template-download-simple {
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    .template-link {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: var(--primary-color);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+
+    .template-link:hover {
+      background: var(--primary-dark);
+    }
+
+    .upload-form-simple {
+      padding: 0 1rem;
+    }
+
+    .file-label-simple {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      margin-bottom: 1rem;
+    }
+
+    .file-label-simple:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .file-label-simple input[type="file"] {
+      display: none;
+    }
+
+    .file-info {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .upload-progress {
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .upload-result {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .upload-result.success {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+
+    .upload-result.error {
+      background: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--error-border);
+    }
+
+    .modal-footer.simple-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .template-link.prominent {
+      background: var(--primary-color);
+      color: #fff;
+      font-weight: 600;
+      font-size: 1em;
+      padding: 0.6em 1.2em;
+      border-radius: 6px;
+      margin-left: 0.5em;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .template-link.prominent:hover {
+      background: var(--primary-dark);
+      color: #fff;
+    }
+    .upload-instructions ol {
+      padding-left: 1.2em;
+      color: var(--text-primary);
+      font-size: 1em;
+    }
+    .upload-instructions ul {
+      margin: 0.3em 0 0.3em 1.2em;
+      font-size: 0.97em;
+    }
+    .hint {
+      color: var(--text-secondary);
+      font-size: 0.92em;
+      font-style: italic;
+      margin-left: 0.3em;
+    }
+    .drag-area {
+      border: 2px dashed var(--primary-color);
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 1.5em 0.5em;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 1em;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drag-area:hover, .drag-area:focus-within {
+      border-color: var(--primary-dark);
+      background: var(--primary-light);
+    }
+    .drag-text {
+      font-size: 1.1em;
+      color: var(--text-secondary);
+      margin-top: 0.5em;
+      display: inline-block;
+    }
+    .modal-header h2 {
+      font-size: 1.4em;
+      font-weight: 700;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .upload-instructions.card-style {
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      padding: 1.2em 1.2em 1em 1.2em;
+      margin-bottom: 1.2em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .upload-list {
+      padding-left: 1.2em;
+      margin-bottom: 0.7em;
+      color: var(--text-primary);
+      font-size: 1em;
+    }
+    .upload-list ul {
+      margin: 0.3em 0 0.3em 1.2em;
+      font-size: 0.97em;
+    }
+    .template-link.simple-link {
+      color: var(--primary-color);
+      font-weight: 500;
+      text-decoration: underline;
+      font-size: 1em;
+      margin-top: 0.5em;
+      display: inline-block;
+    }
+    .template-link.simple-link:hover {
+      color: var(--primary-dark);
+    }
+    .file-label-simple {
+      font-size: 1em;
+      color: var(--text-primary);
+    }
+    .hint {
+      color: var(--text-secondary);
+      font-size: 0.92em;
+      font-style: italic;
+      margin-left: 0.3em;
+    }
+    .modal-header h3 {
+      font-size: 1.2em;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin: 0;
+    }
+
+    /* Hide checkboxes by default */
+    .data-table .styled-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    /* Show checkbox on row hover */
+    .data-table tr:hover .styled-checkbox,
+    .data-table tr:focus-within .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Show checkbox if checked */
+    .data-table .styled-checkbox:checked {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Show all checkboxes if table has .show-all-checkboxes (JS toggles this for bulk select) */
+    .data-table.show-all-checkboxes .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Hide select-all container by default */
+    #bulkDeleteForm .select-all-container {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes .select-all-container {
+      display: flex !important;
+      align-items: center;
+    }
+
+    /* Hide bulk delete button by default */
+    #bulkDeleteBtn {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
+      display: inline-block;
+    }
+
+    /* Custom styled checkbox */
+    .styled-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #232e3e;   /* dark background */
+      border: 2px solid #4285f4;   /* blue border */
+      border-radius: 6px;          /* rounded corners */
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: inline-block;
+      vertical-align: middle;
+      position: relative;
+    }
+
+    .styled-checkbox:focus {
+      box-shadow: 0 0 0 2px #4285f455;
+      border-color: #4285f4;
+    }
+
+    .styled-checkbox:checked {
+      background-color: #4285f4;
+      border-color: #4285f4;
+    }
+
+    /* Custom checkmark */
+    .styled-checkbox:checked::after {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 8px;
+      height: 14px;
+      border: solid #fff;
+      border-width: 0 3px 3px 0;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      box-sizing: border-box;
     }
   </style>
 
@@ -629,10 +1045,128 @@ if (isset($_GET['edit'])) {
       });
     });
 
-    // Upload button (placeholder)
-    document.getElementById('uploadBtn').addEventListener('click', () => {
-      alert('Upload functionality will be implemented here');
+    // Upload Excel AJAX logic (refactored for consistency)
+    const uploadExcelForm = document.getElementById('uploadExcelForm');
+    const uploadResult = document.getElementById('uploadResult');
+    const uploadLoading = document.getElementById('uploadLoading');
+    const excelFileInput = document.getElementById('excelFile');
+    const fileInfo = document.getElementById('fileInfo');
+    if (excelFileInput && fileInfo) {
+      excelFileInput.addEventListener('change', function() {
+        if (excelFileInput.files && excelFileInput.files.length > 0) {
+          const file = excelFileInput.files[0];
+          fileInfo.innerHTML = `<b>Selected file:</b> ${file.name}<br>Size: ${(file.size/1024/1024).toFixed(2)} MB<br>Type: ${file.type || 'N/A'}`;
+        } else {
+          fileInfo.textContent = '';
+        }
+      });
+    }
+    if (uploadExcelForm) {
+      uploadExcelForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadResult.textContent = '';
+        uploadResult.style.display = 'none';
+        uploadLoading.style.display = 'block';
+        const formData = new FormData(uploadExcelForm);
+        fetch('upload_excel_data_collection_tools.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          uploadLoading.style.display = 'none';
+          uploadResult.style.display = 'block';
+          if (data.success) {
+            uploadResult.innerHTML = `
+              <div style="background:#1e4620; color:#d4f8e8; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #2ecc40;">
+                <i class='fas fa-check-circle' style='font-size:1.5em; color:#2ecc40;'></i>
+                <div><b>Success!</b> ${data.message}</div>
+              </div>
+            `;
+            setTimeout(() => { window.location.reload(); }, 1800);
+          } else {
+            uploadResult.innerHTML = `
+              <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:flex-start; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
+                <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
+                <div><b>Error!</b> ${data.message}
+                  ${(data.data && data.data.errors) ? '<ul style='margin:0.5em 0 0 1.2em; color:#ffd6d6;'>' + data.data.errors.map(e => '<li>' + e + '</li>').join('') + '</ul>' : ''}
+                </div>
+              </div>
+            `;
+          }
+        })
+        .catch(err => {
+          uploadLoading.style.display = 'none';
+          uploadResult.style.display = 'block';
+          uploadResult.innerHTML = `
+            <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
+              <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
+              <div><b>Error!</b> Upload failed.</div>
+            </div>
+          `;
+        });
+      });
+    }
+
+    // Bulk delete button enable/disable
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    const selectAllContainer = document.querySelector('.select-all-container');
+    function updateBulkDeleteBtn() {
+      let checkedCount = 0;
+      rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+      if (checkedCount > 0) {
+        bulkDeleteBtn.style.display = '';
+        bulkDeleteBtn.disabled = checkedCount < 2;
+      } else {
+        bulkDeleteBtn.style.display = 'none';
+        bulkDeleteBtn.disabled = true;
+      }
+      // Show select-all if at least 1 is checked OR select-all is checked/indeterminate
+      if (selectAllContainer) {
+        if (
+          checkedCount > 0 ||
+          (selectAll && (selectAll.checked || selectAll.indeterminate))
+        ) {
+          selectAllContainer.classList.add('visible');
+        } else {
+          selectAllContainer.classList.remove('visible');
+        }
+      }
+      // Show all checkboxes if any are checked
+      const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+      if (bulkDeleteForm) {
+        if (checkedCount > 0) {
+          bulkDeleteForm.classList.add('show-all-checkboxes');
+        } else {
+          bulkDeleteForm.classList.remove('show-all-checkboxes');
+        }
+      }
+      // Update selectAll checkbox state
+      if (selectAll) {
+        if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
+          selectAll.checked = true;
+          selectAll.indeterminate = false;
+        } else if (checkedCount > 0) {
+          selectAll.checked = false;
+          selectAll.indeterminate = true;
+        } else {
+          selectAll.checked = false;
+          selectAll.indeterminate = false;
+        }
+      }
+    }
+    rowCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkDeleteBtn);
     });
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+        updateBulkDeleteBtn();
+      });
+    }
+    updateBulkDeleteBtn();
   </script>
 </body>
 </html> 

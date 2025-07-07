@@ -11,7 +11,7 @@ if (empty($_SESSION['logged_in'])) {
 
 // Research Capacity Building Activities template download
 header('Content-Type: text/csv');
-header('Content-Disposition: attachment; filename="research_capacity_building_template.csv"');
+header('Content-Disposition: attachment; filename="research_capacity_building_activities_template.csv"');
 $output = fopen('php://output', 'w');
 fputcsv($output, [
     'Date',
@@ -22,8 +22,8 @@ fputcsv($output, [
     'Status'
 ]);
 fputcsv($output, [
-    '2024-06-01',
-    'Research Workshop',
+    '2024-07-01',
+    'Workshop on Research Methods',
     'Main Hall',
     'Dr. Smith, Prof. Lee',
     '50',

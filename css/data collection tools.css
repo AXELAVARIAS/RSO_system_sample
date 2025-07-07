@@ -269,3 +269,92 @@ body {
       width: 100%;
     }
   }
+  /* Add this at the end of the file for specificity */
+  .data-table tbody tr:hover, table tbody tr:hover {
+    background: #f1f5f9;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .data-table tbody tr:hover, table tbody tr:hover {
+      background: #334155;
+    }
+  }
+
+  /* Modern custom checkbox styles */
+  input[type="checkbox"].styled-checkbox, #selectAll.styled-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--btn-primary-bg);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    vertical-align: middle;
+    margin: 0;
+  }
+  input[type="checkbox"].styled-checkbox:checked, #selectAll.styled-checkbox:checked {
+    background-color: var(--btn-primary-bg);
+    border-color: var(--btn-primary-bg);
+  }
+  input[type="checkbox"].styled-checkbox:checked::after, #selectAll.styled-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid #fff;
+    border-width: 0 3px 3px 0;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    transition: border-color 0.2s;
+  }
+  input[type="checkbox"].styled-checkbox:focus, #selectAll.styled-checkbox:focus {
+    box-shadow: 0 0 0 2px var(--btn-primary-bg, #3b82f6);
+  }
+  #selectAll.styled-checkbox:indeterminate {
+    background-color: var(--btn-primary-bg);
+    border-color: var(--btn-primary-bg);
+  }
+  #selectAll.styled-checkbox:indeterminate::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    width: 14px;
+    height: 3px;
+    background: #fff;
+    border-radius: 2px;
+  }
+  .select-all-container label {
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 0;
+    margin-left: 0.5em;
+    font-size: 1em;
+    color: var(--text-primary);
+  }
+  .data-table td:first-child, .data-table th:first-child {
+    text-align: center;
+    width: 36px;
+  }
+  /* Hide row checkboxes by default, show on row hover or if any checked */
+  .data-table .row-checkbox {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .data-table tr:hover .row-checkbox,
+  .data-table.show-all-checkboxes .row-checkbox {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .select-all-container .styled-checkbox {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
