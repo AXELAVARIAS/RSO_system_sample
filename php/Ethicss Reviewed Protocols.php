@@ -191,6 +191,12 @@ if (isset($_GET['edit'])) {
       border: 1.5px solid #e74c3c;
     }
     
+    .upload-result.info {
+      background: #2c3e50;
+      color: #ecf0f1;
+      border: 1.5px solid #34495e;
+    }
+    
     .upload-result i {
       font-size: 1.2em;
       margin-top: 0.1em;
@@ -459,13 +465,13 @@ if (isset($_GET['edit'])) {
           <p>Monitor research ethics compliance and protocol approvals</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="uploadBtn">
-            <i class="fas fa-upload"></i>
-            Upload Excel
-          </button>
           <button class="btn btn-primary" id="addBtn">
             <i class="fas fa-plus"></i>
             Add New Entry
+          </button>
+          <button class="btn btn-secondary" id="uploadExcelBtn" style="margin-left: 0.5em;">
+            <i class="fas fa-file-excel"></i>
+            Upload Excel
           </button>
         </div>
       </div>
@@ -558,11 +564,11 @@ if (isset($_GET['edit'])) {
       </div>
 
       <!-- Upload Excel Modal -->
-      <div class="modal" id="uploadModal">
+      <div class="modal" id="uploadExcelModal">
         <div class="modal-content upload-modal-simple">
           <div class="modal-header">
             <h3>Upload Excel File</h3>
-            <button class="modal-close" id="closeUploadModal">
+            <button class="modal-close" id="closeUploadExcelModal">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -576,7 +582,7 @@ if (isset($_GET['edit'])) {
                   <li><b>Protocol Number</b></li>
                   <li><b>Research Title</b></li>
                   <li><b>Department</b></li>
-                  <li><b>Status</b> (Approved, Under Review, Pending)</li>
+                  <li><b>Status</b> (Approved, Under Review, Pending, Rejected)</li>
                   <li><b>Action Taken</b></li>
                 </ul>
                 <li>First row should contain column headers</li>
@@ -600,7 +606,7 @@ if (isset($_GET['edit'])) {
             </form>
           </div>
           <div class="modal-footer simple-footer">
-            <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
+            <button type="button" class="btn btn-secondary" id="cancelUploadExcel">Cancel</button>
             <button type="button" class="btn btn-primary" id="submitUpload" disabled>Upload File</button>
           </div>
         </div>
@@ -728,16 +734,12 @@ if (isset($_GET['edit'])) {
     // Modal functionality
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
-    const uploadModal = document.getElementById('uploadModal');
     const addBtn = document.getElementById('addBtn');
     const addFirstBtn = document.getElementById('addFirstBtn');
-    const uploadBtn = document.getElementById('uploadBtn');
     const closeAddModal = document.getElementById('closeAddModal');
     const closeEditModal = document.getElementById('closeEditModal');
-    const closeUploadModal = document.getElementById('closeUploadModal');
     const cancelAdd = document.getElementById('cancelAdd');
     const cancelEdit = document.getElementById('cancelEdit');
-    const cancelUpload = document.getElementById('cancelUpload');
 
     function openModal(modal) {
       modal.style.display = 'flex';
@@ -751,16 +753,13 @@ if (isset($_GET['edit'])) {
 
     addBtn.addEventListener('click', () => openModal(addModal));
     if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
-    uploadBtn.addEventListener('click', () => openModal(uploadModal));
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     closeEditModal.addEventListener('click', () => closeModal(editModal));
-    closeUploadModal.addEventListener('click', () => closeModal(uploadModal));
     cancelAdd.addEventListener('click', () => closeModal(addModal));
     cancelEdit.addEventListener('click', () => closeModal(editModal));
-    cancelUpload.addEventListener('click', () => closeModal(uploadModal));
 
     // Close modal when clicking outside
-    [addModal, editModal, uploadModal].forEach(modal => {
+    [addModal, editModal].forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
           closeModal(modal);
@@ -838,163 +837,6 @@ if (isset($_GET['edit'])) {
       });
     });
 
-    // Upload functionality
-    const excelFile = document.getElementById('excelFile');
-    const fileInfo = document.getElementById('fileInfo');
-    const submitUpload = document.getElementById('submitUpload');
-    const uploadProgress = document.getElementById('uploadProgress');
-    const uploadResult = document.getElementById('uploadResult');
-    const progressFill = document.querySelector('.progress-fill');
-    const progressText = document.querySelector('.progress-text');
-
-    // File selection handler
-    excelFile.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        fileInfo.innerHTML = `
-          <strong>Selected file:</strong> ${file.name}<br>
-          <strong>Size:</strong> ${fileSize} MB<br>
-          <strong>Type:</strong> ${file.type || 'Unknown'}
-        `;
-        submitUpload.disabled = false;
-        
-        // Hide any previous results
-        uploadResult.style.display = 'none';
-      } else {
-        fileInfo.innerHTML = '';
-        submitUpload.disabled = true;
-      }
-    });
-
-    // Upload submission handler
-    submitUpload.addEventListener('click', async () => {
-      const file = excelFile.files[0];
-      if (!file) {
-        console.log('No file selected');
-        return;
-      }
-
-      console.log('Starting upload for file:', file.name);
-
-      // Show progress
-      uploadProgress.style.display = 'block';
-      uploadResult.style.display = 'none';
-      submitUpload.disabled = true;
-      
-      // Simulate progress
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += Math.random() * 20;
-        if (progress > 90) progress = 90;
-        progressFill.style.width = progress + '%';
-      }, 200);
-
-      try {
-        const formData = new FormData();
-        formData.append('excel_file', file);
-
-        console.log('Sending request to test_db_connection.php');
-        const response = await fetch('test_db_connection.php', {
-          method: 'POST',
-          body: formData
-        });
-
-        console.log('Response received:', response.status);
-        const responseText = await response.text();
-        console.log('Response text:', responseText);
-        
-        // For now, just show the response text
-        clearInterval(progressInterval);
-        progressFill.style.width = '100%';
-        progressText.textContent = 'Upload complete!';
-
-        setTimeout(() => {
-          uploadProgress.style.display = 'none';
-          uploadResult.style.display = 'block';
-          uploadResult.className = 'upload-result success';
-          uploadResult.innerHTML = `
-            <i class="fas fa-check-circle"></i>
-            <strong>Database Test Response:</strong><br>
-            <div style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.1); padding: 10px; margin-top: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
-              ${responseText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-            </div>
-          `;
-          submitUpload.disabled = false;
-        }, 500);
-        
-        return; // Skip the rest of the function
-        
-        clearInterval(progressInterval);
-        progressFill.style.width = '100%';
-        progressText.textContent = 'Upload complete!';
-
-        // Show result
-        setTimeout(() => {
-          uploadProgress.style.display = 'none';
-          uploadResult.style.display = 'block';
-          
-          if (result.success) {
-            uploadResult.className = 'upload-result success';
-            uploadResult.innerHTML = `
-              <i class="fas fa-check-circle"></i>
-              <strong>Success!</strong> ${result.message}
-              ${result.data.errors && result.data.errors.length > 0 ? 
-                `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
-            `;
-            
-            // Reload page after successful upload to show new data
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          } else {
-            uploadResult.className = 'upload-result error';
-            uploadResult.innerHTML = `
-              <i class="fas fa-exclamation-circle"></i>
-              <strong>Error:</strong> ${result.message}
-            `;
-          }
-          
-          submitUpload.disabled = false;
-        }, 500);
-
-      } catch (error) {
-        console.error('Upload error:', error);
-        clearInterval(progressInterval);
-        uploadProgress.style.display = 'none';
-        uploadResult.style.display = 'block';
-        uploadResult.className = 'upload-result error';
-        uploadResult.innerHTML = `
-          <i class="fas fa-exclamation-circle"></i>
-          <strong>Error:</strong> Upload failed. Please try again.<br>
-          <small>Error details: ${error.message}</small>
-        `;
-        submitUpload.disabled = false;
-      }
-    });
-
-    // Reset upload form when modal is closed
-    function resetUploadForm() {
-      excelFile.value = '';
-      fileInfo.innerHTML = '';
-      uploadProgress.style.display = 'none';
-      uploadResult.style.display = 'none';
-      progressFill.style.width = '0%';
-      progressText.textContent = 'Uploading...';
-      submitUpload.disabled = true;
-    }
-
-    // Add reset to close handlers
-    closeUploadModal.addEventListener('click', () => {
-      closeModal(uploadModal);
-      resetUploadForm();
-    });
-    
-    cancelUpload.addEventListener('click', () => {
-      closeModal(uploadModal);
-      resetUploadForm();
-    });
-
     // Bulk delete button enable/disable and show-all-checkboxes logic
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
@@ -1034,6 +876,157 @@ if (isset($_GET['edit'])) {
       });
     }
     updateBulkDeleteBtn();
+
+    // Upload functionality
+    const uploadExcelBtn = document.getElementById('uploadExcelBtn');
+    const uploadExcelModal = document.getElementById('uploadExcelModal');
+    const closeUploadExcelModal = document.getElementById('closeUploadExcelModal');
+    const cancelUploadExcel = document.getElementById('cancelUploadExcel');
+    const excelFile = document.getElementById('excelFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitUpload = document.getElementById('submitUpload');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadResult = document.getElementById('uploadResult');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
+
+    // Upload modal functionality
+    if (uploadExcelBtn) {
+      uploadExcelBtn.addEventListener('click', () => openModal(uploadExcelModal));
+      closeUploadExcelModal.addEventListener('click', () => closeModal(uploadExcelModal));
+      cancelUploadExcel.addEventListener('click', () => closeModal(uploadExcelModal));
+      
+      // Close modal when clicking outside
+      uploadExcelModal.addEventListener('click', (e) => {
+        if (e.target === uploadExcelModal) {
+          closeModal(uploadExcelModal);
+        }
+      });
+    }
+
+    // File selection handler
+    excelFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        fileInfo.innerHTML = `
+          <strong>Selected file:</strong> ${file.name}<br>
+          <strong>Size:</strong> ${fileSize} MB<br>
+          <strong>Type:</strong> ${file.type || 'Unknown'}
+        `;
+        submitUpload.disabled = false;
+        
+        // Hide any previous results
+        uploadResult.style.display = 'none';
+      } else {
+        fileInfo.innerHTML = '';
+        submitUpload.disabled = true;
+      }
+    });
+
+    // Upload submission handler
+    submitUpload.addEventListener('click', async () => {
+      const file = excelFile.files[0];
+      if (!file) return;
+
+      // Show progress
+      uploadProgress.style.display = 'block';
+      uploadResult.style.display = 'none';
+      submitUpload.disabled = true;
+      
+      // Simulate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+        progressFill.style.width = progress + '%';
+      }, 200);
+
+      try {
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        const response = await fetch('upload_excel_ethics_reviewed_protocols.php', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        // Show result
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
+          uploadResult.style.display = 'block';
+          
+          if (result.success) {
+            uploadResult.className = 'upload-result success';
+            uploadResult.innerHTML = `
+              <i class="fas fa-check-circle"></i>
+              <strong>Success!</strong> ${result.message}
+              ${result.data.errors && result.data.errors.length > 0 ? 
+                `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
+            `;
+            
+            // Reload page after successful upload to show new data
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            uploadResult.className = 'upload-result error';
+            uploadResult.innerHTML = `
+              <i class="fas fa-exclamation-circle"></i>
+              <strong>Error:</strong> ${result.message}
+            `;
+          }
+          
+          submitUpload.disabled = false;
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        uploadProgress.style.display = 'none';
+        uploadResult.style.display = 'block';
+        uploadResult.className = 'upload-result error';
+        uploadResult.innerHTML = `
+          <i class="fas fa-exclamation-circle"></i>
+          <strong>Error:</strong> Upload failed. Please try again.
+        `;
+        submitUpload.disabled = false;
+      }
+    });
+
+    // Reset upload form when modal is closed
+    function resetUploadForm() {
+      excelFile.value = '';
+      fileInfo.innerHTML = '';
+      uploadProgress.style.display = 'none';
+      uploadResult.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      submitUpload.disabled = true;
+    }
+
+    // Add reset to close handlers
+    closeUploadExcelModal.addEventListener('click', () => {
+      closeModal(uploadExcelModal);
+      resetUploadForm();
+    });
+    
+    cancelUploadExcel.addEventListener('click', () => {
+      closeModal(uploadExcelModal);
+      resetUploadForm();
+    });
+
+    // Also reset when clicking outside modal
+    uploadExcelModal.addEventListener('click', (e) => {
+      if (e.target === uploadExcelModal) {
+        resetUploadForm();
+      }
+    });
   </script>
 </body>
 </html> 

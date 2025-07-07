@@ -27,5 +27,26 @@ fputcsv($output, [
     'Approved',
     'Approval letter issued'
 ]);
+fputcsv($output, [
+    'EP-2025-002',
+    'Social Media Impact Study',
+    'Psychology',
+    'Under Review',
+    'Currently under review'
+]);
+fputcsv($output, [
+    'EP-2025-003',
+    'Environmental Assessment',
+    'Environmental Science',
+    'Pending',
+    'Waiting for documentation'
+]);
+fputcsv($output, [
+    'EP-2025-004',
+    'Controversial Research',
+    'Medicine',
+    'Rejected',
+    'Rejected due to ethical concerns'
+]);
 fclose($output);
 exit; 
