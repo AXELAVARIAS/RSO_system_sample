@@ -137,6 +137,189 @@ if (isset($_GET['edit'])) {
       display: inline-block;
     }
 
+    /* Upload Progress Styles */
+    .upload-progress {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--btn-primary-bg);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    /* Upload Result Styles */
+    .upload-result {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    
+    .upload-result.success {
+      background: #1e4620;
+      color: #d4f8e8;
+      border: 1.5px solid #2ecc40;
+    }
+    
+    .upload-result.error {
+      background: #4d2323;
+      color: #ffd6d6;
+      border: 1.5px solid #e74c3c;
+    }
+    
+    .upload-result i {
+      font-size: 1.2em;
+      margin-top: 0.1em;
+    }
+    
+    .upload-result.success i {
+      color: #2ecc40;
+    }
+    
+    .upload-result.error i {
+      color: #e74c3c;
+    }
+
+    /* Simplified Upload Modal Styles */
+    .upload-modal-simple {
+      max-width: 400px;
+      min-width: 0;
+      width: 100%;
+      padding: 0;
+      background: var(--bg-modal);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .upload-simple-instructions {
+      padding: 1.2rem 1.2rem 0.5rem 1.2rem;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+    
+    .upload-simple-instructions ul {
+      margin: 0.5rem 0 0.5rem 1.2rem;
+      padding-left: 1.2rem;
+      font-size: 0.97rem;
+      color: var(--text-secondary);
+    }
+    
+    .upload-simple-instructions ul ul {
+      margin: 0.2rem 0 0.2rem 1.2rem;
+      font-size: 0.95rem;
+    }
+    
+    .template-download-simple {
+      margin: 1rem 0 0.5rem 0;
+    }
+    
+    .template-link {
+      color: var(--btn-primary-bg);
+      text-decoration: underline;
+      font-size: 0.98rem;
+      font-weight: 500;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    
+    .template-link:hover {
+      text-decoration: none;
+      color: var(--btn-primary-hover);
+    }
+    
+    .upload-form-simple {
+      padding: 0 1.2rem 1.2rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    
+    .file-label-simple {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    
+    #excelFile {
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.97rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      width: 100%;
+      margin-bottom: 0.2rem;
+    }
+    
+    #excelFile:focus {
+      outline: 2px solid var(--btn-primary-bg);
+      border-color: var(--btn-primary-bg);
+    }
+    
+    .file-info {
+      margin-top: 0.2rem;
+      padding: 0.4rem 0.7rem;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      font-size: 0.93rem;
+      color: var(--text-secondary);
+      width: 100%;
+      word-break: break-all;
+    }
+    
+    .simple-footer {
+      padding: 1rem 1.2rem 1rem 1.2rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      border-radius: 0 0 12px 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+    
+    @media (max-width: 600px) {
+      .upload-modal-simple {
+        max-width: 98vw;
+        min-width: 0;
+        padding: 0;
+      }
+      .upload-simple-instructions, .upload-form-simple {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+      .simple-footer {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+    }
+
     /* Custom styled checkbox */
     .styled-checkbox {
       appearance: none;
@@ -376,44 +559,50 @@ if (isset($_GET['edit'])) {
 
       <!-- Upload Excel Modal -->
       <div class="modal" id="uploadModal">
-        <div class="modal-content">
+        <div class="modal-content upload-modal-simple">
           <div class="modal-header">
             <h3>Upload Excel File</h3>
             <button class="modal-close" id="closeUploadModal">
               <i class="fas fa-times"></i>
             </button>
           </div>
-          <form class="modal-form" id="uploadExcelForm" enctype="multipart/form-data">
-            <ul style="margin-bottom:1em;">
-              <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
-              <li>File should contain these columns (in any order):
-                <ul style="margin-top:0.3em;">
+          <div class="modal-body">
+            <div class="upload-simple-instructions">
+              <p><strong>Instructions:</strong></p>
+              <ul>
+                <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
+                <li>File should contain these columns (in any order):</li>
+                <ul>
                   <li><b>Protocol Number</b></li>
                   <li><b>Research Title</b></li>
                   <li><b>Department</b></li>
-                  <li><b>Status</b> <span style="color:#888;">(Approved, Under Review, Pending)</span></li>
+                  <li><b>Status</b> (Approved, Under Review, Pending)</li>
                   <li><b>Action Taken</b></li>
                 </ul>
-              </li>
-              <li>First row should contain column headers</li>
-              <li>Maximum file size: 5MB</li>
-            </ul>
-            <a href="download_template_ethics_reviewed_protocols.php" target="_blank" style="margin-bottom:1em;display:inline-block;">Download Template</a>
-            <div class="form-group" style="margin-top:1em;">
-              <label for="excelFile" style="font-weight:600;">Select File</label>
+                <li>First row should contain column headers</li>
+                <li>Maximum file size: 5MB</li>
+              </ul>
+              <div class="template-download-simple">
+                <a href="download_template_ethics_reviewed_protocols.php" class="template-link" download>Download Template</a>
+              </div>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data" class="upload-form-simple">
+              <label for="excelFile" class="file-label-simple">Select File</label>
               <input type="file" id="excelFile" name="excel_file" accept=".xls,.xlsx,.csv" required>
-              <div id="fileInfo" style="margin-top:0.5em; font-size:0.97em; color:#ccc;"></div>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
-              <button type="submit" class="btn btn-primary">Upload File</button>
-            </div>
-            <div id="uploadResult" style="margin-top:1em;"></div>
-            <div id="uploadLoading" style="margin-top:1em; display:none; text-align:center;">
-              <i class="fas fa-spinner fa-spin" style="font-size:1.5em;"></i>
-              <span style="margin-left:0.5em;">Uploading...</span>
-            </div>
-          </form>
+              <div class="file-info" id="fileInfo"></div>
+              <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                  <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">Uploading...</div>
+              </div>
+              <div class="upload-result" id="uploadResult" style="display: none;"></div>
+            </form>
+          </div>
+          <div class="modal-footer simple-footer">
+            <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitUpload" disabled>Upload File</button>
+          </div>
         </div>
       </div>
 
@@ -649,68 +838,162 @@ if (isset($_GET['edit'])) {
       });
     });
 
-    // Upload Excel AJAX logic
-    const uploadExcelForm = document.getElementById('uploadExcelForm');
-    const uploadResult = document.getElementById('uploadResult');
-    const uploadLoading = document.getElementById('uploadLoading');
-    const excelFileInput = document.getElementById('excelFile');
+    // Upload functionality
+    const excelFile = document.getElementById('excelFile');
     const fileInfo = document.getElementById('fileInfo');
-    if (excelFileInput && fileInfo) {
-      excelFileInput.addEventListener('change', function() {
-        if (excelFileInput.files && excelFileInput.files.length > 0) {
-          const file = excelFileInput.files[0];
-          fileInfo.innerHTML = `<b>Selected file:</b> ${file.name}<br>Size: ${(file.size/1024/1024).toFixed(2)} MB<br>Type: ${file.type || 'N/A'}`;
-        } else {
-          fileInfo.textContent = '';
-        }
-      });
-    }
-    if (uploadExcelForm) {
-      uploadExcelForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        uploadResult.textContent = '';
+    const submitUpload = document.getElementById('submitUpload');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadResult = document.getElementById('uploadResult');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
+
+    // File selection handler
+    excelFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        fileInfo.innerHTML = `
+          <strong>Selected file:</strong> ${file.name}<br>
+          <strong>Size:</strong> ${fileSize} MB<br>
+          <strong>Type:</strong> ${file.type || 'Unknown'}
+        `;
+        submitUpload.disabled = false;
+        
+        // Hide any previous results
         uploadResult.style.display = 'none';
-        uploadLoading.style.display = 'block';
-        const formData = new FormData(uploadExcelForm);
-        fetch('upload_excel_ethics_reviewed_protocols.php', {
+      } else {
+        fileInfo.innerHTML = '';
+        submitUpload.disabled = true;
+      }
+    });
+
+    // Upload submission handler
+    submitUpload.addEventListener('click', async () => {
+      const file = excelFile.files[0];
+      if (!file) {
+        console.log('No file selected');
+        return;
+      }
+
+      console.log('Starting upload for file:', file.name);
+
+      // Show progress
+      uploadProgress.style.display = 'block';
+      uploadResult.style.display = 'none';
+      submitUpload.disabled = true;
+      
+      // Simulate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+        progressFill.style.width = progress + '%';
+      }, 200);
+
+      try {
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        console.log('Sending request to test_db_connection.php');
+        const response = await fetch('test_db_connection.php', {
           method: 'POST',
           body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          uploadLoading.style.display = 'none';
+        });
+
+        console.log('Response received:', response.status);
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+        
+        // For now, just show the response text
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
           uploadResult.style.display = 'block';
-          if (data.success) {
-            uploadResult.innerHTML = `
-              <div style="background:#1e4620; color:#d4f8e8; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #2ecc40;">
-                <i class='fas fa-check-circle' style='font-size:1.5em; color:#2ecc40;'></i>
-                <div><b>Success!</b> ${data.message}</div>
-              </div>
-            `;
-            setTimeout(() => { window.location.reload(); }, 1800);
-          } else {
-            uploadResult.innerHTML = `
-              <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:flex-start; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
-                <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
-                <div><b>Error!</b> ${data.message}
-                  ${(data.data && data.data.errors) ? '<ul style=\'margin:0.5em 0 0 1.2em; color:#ffd6d6;\'>' + data.data.errors.map(e => '<li>' + e + '</li>').join('') + '</ul>' : ''}
-                </div>
-              </div>
-            `;
-          }
-        })
-        .catch(err => {
-          uploadLoading.style.display = 'none';
-          uploadResult.style.display = 'block';
+          uploadResult.className = 'upload-result success';
           uploadResult.innerHTML = `
-            <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
-              <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
-              <div><b>Error!</b> Upload failed.</div>
+            <i class="fas fa-check-circle"></i>
+            <strong>Database Test Response:</strong><br>
+            <div style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.1); padding: 10px; margin-top: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+              ${responseText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
             </div>
           `;
-        });
-      });
+          submitUpload.disabled = false;
+        }, 500);
+        
+        return; // Skip the rest of the function
+        
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        // Show result
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
+          uploadResult.style.display = 'block';
+          
+          if (result.success) {
+            uploadResult.className = 'upload-result success';
+            uploadResult.innerHTML = `
+              <i class="fas fa-check-circle"></i>
+              <strong>Success!</strong> ${result.message}
+              ${result.data.errors && result.data.errors.length > 0 ? 
+                `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
+            `;
+            
+            // Reload page after successful upload to show new data
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            uploadResult.className = 'upload-result error';
+            uploadResult.innerHTML = `
+              <i class="fas fa-exclamation-circle"></i>
+              <strong>Error:</strong> ${result.message}
+            `;
+          }
+          
+          submitUpload.disabled = false;
+        }, 500);
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        clearInterval(progressInterval);
+        uploadProgress.style.display = 'none';
+        uploadResult.style.display = 'block';
+        uploadResult.className = 'upload-result error';
+        uploadResult.innerHTML = `
+          <i class="fas fa-exclamation-circle"></i>
+          <strong>Error:</strong> Upload failed. Please try again.<br>
+          <small>Error details: ${error.message}</small>
+        `;
+        submitUpload.disabled = false;
+      }
+    });
+
+    // Reset upload form when modal is closed
+    function resetUploadForm() {
+      excelFile.value = '';
+      fileInfo.innerHTML = '';
+      uploadProgress.style.display = 'none';
+      uploadResult.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      submitUpload.disabled = true;
     }
+
+    // Add reset to close handlers
+    closeUploadModal.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
+    
+    cancelUpload.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
 
     // Bulk delete button enable/disable and show-all-checkboxes logic
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');

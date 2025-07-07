@@ -11,6 +11,11 @@ if (empty($_SESSION['logged_in'])) {
 
 $response = ['success' => false, 'message' => '', 'data' => []];
 
+// Debug logging
+error_log("Upload debug - Request method: " . $_SERVER['REQUEST_METHOD']);
+error_log("Upload debug - POST data: " . print_r($_POST, true));
+error_log("Upload debug - FILES data: " . print_r($_FILES, true));
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
     $file = $_FILES['excel_file'];
     
@@ -92,29 +97,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         // Validate header row
         $expected_headers = ['Protocol Number', 'Research Title', 'Department', 'Status', 'Action Taken'];
         $first_row = $data[0];
-        // Remove BOM and quotes from first header if present
-        foreach ($first_row as &$header) {
-            $header = preg_replace('/^\xEF\xBB\xBF/', '', $header); // Remove BOM
-            $header = trim($header, " \t\n\r\0\x0B\""); // Remove spaces and quotes
+        // Remove BOM from first header if present
+        if (isset($first_row[0])) {
+            $first_row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $first_row[0]);
         }
-        unset($header);
         $first_row = array_map('trim', $first_row);
-        // Map header names to their column index (case-insensitive, ignore spaces, underscores, slashes, and quotes)
+        // Map header names to their column index (case-insensitive)
         $header_map = [];
         foreach ($first_row as $idx => $header) {
-            $header_clean = strtolower(str_replace([' ', '_', '/', '"', "'"], '', $header));
+            $header_clean = strtolower(str_replace([' ', '_'], '', $header));
             $header_map[$header_clean] = $idx;
         }
-        // Check for at least 4/5 required headers (allow some flexibility, partial match)
+        // Check for at least 4/5 required headers
         $header_matches = 0;
         foreach ($expected_headers as $expected) {
-            $expected_clean = strtolower(str_replace([' ', '_', '/', '"', "'"], '', $expected));
-            // Allow partial match (e.g., 'departme' for 'department')
-            foreach ($header_map as $header_key => $idx) {
-                if (strpos($header_key, $expected_clean) !== false || strpos($expected_clean, $header_key) !== false) {
-                    $header_matches++;
-                    break;
-                }
+            $expected_clean = strtolower(str_replace([' ', '_'], '', $expected));
+            if (isset($header_map[$expected_clean])) {
+                $header_matches++;
             }
         }
         if ($header_matches < 4) {
@@ -122,20 +121,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             echo json_encode($response);
             exit;
         }
-        // Helper to get value by header name (use partial match)
+        // Helper to get value by header name
         function get_col($row, $header_map, $name) {
-            $key = strtolower(str_replace([' ', '_', '/', '"', "'"], '', $name));
-            foreach ($header_map as $header_key => $idx) {
-                if (strpos($header_key, $key) !== false || strpos($key, $header_key) !== false) {
-                    return isset($row[$idx]) ? trim($row[$idx]) : '';
-                }
-            }
-            return '';
+            $key = strtolower(str_replace([' ', '_'], '', $name));
+            return isset($header_map[$key]) ? trim($row[$header_map[$key]] ?? '') : '';
         }
         // Process data rows (skip header)
         $success_count = 0;
         $error_count = 0;
         $errors = [];
+        $valid_statuses = ['Approved', 'Under Review', 'Pending'];
         foreach (array_slice($data, 1) as $i => $row) {
             // Skip empty rows
             if (empty(array_filter($row, function($v){return trim($v) !== '';}))) {
@@ -153,10 +148,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 $errors[] = "Row " . ($i + 2) . ": Missing required fields.";
                 continue;
             }
+            // Validate status (case-insensitive, trim)
+            $status_clean = ucwords(strtolower(trim($status)));
+            if (!in_array($status_clean, $valid_statuses)) {
+                $status_clean = 'Pending';
+            }
             try {
                 $db->query(
                     "INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)",
-                    [$protocol_number, $title, $department, $status, $action_taken]
+                    [$protocol_number, $title, $department, $status_clean, $action_taken]
                 );
                 $success_count++;
             } catch (Exception $e) {
@@ -164,40 +164,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 $errors[] = "Row " . ($i + 2) . ": " . $e->getMessage();
             }
         }
+        
         // Prepare response
         if ($success_count > 0) {
             $response['success'] = true;
-            $response['message'] = "Successfully imported $success_count entries.";
+            $response['message'] = "Successfully imported $success_count protocols.";
             if ($error_count > 0) {
                 $response['message'] .= " $error_count rows had errors.";
             }
+            $response['data'] = [
+                'success_count' => $success_count,
+                'error_count' => $error_count,
+                'errors' => $errors
+            ];
+            
+            // Log successful upload
+            error_log("Excel upload successful: $success_count protocols imported, $error_count errors. File: " . $file['name']);
         } else {
-            $response['message'] = $error_count > 0 ? "All rows had errors." : "No valid data found.";
+            $response['message'] = "No protocols were imported. Please check your file format.";
+            $response['data'] = ['errors' => $errors];
+            
+            // Log failed upload
+            error_log("Excel upload failed: No protocols imported. File: " . $file['name'] . ". Errors: " . implode(', ', $errors));
         }
-        $response['data'] = ['errors' => $errors];
-        echo json_encode($response);
-        exit;
+        
     } catch (Exception $e) {
         $response['message'] = 'Database error: ' . $e->getMessage();
-        echo json_encode($response);
-        exit;
     }
+} else {
+    $response['message'] = 'No file uploaded.';
 }
 
-// Helper: Excel to CSV conversion using PhpSpreadsheet if available
+error_log("Upload debug - Final response: " . json_encode($response));
+echo json_encode($response);
+
+// Function to convert Excel file to CSV format
 function convertExcelToCSV($file_path) {
-    if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
-        require_once __DIR__ . '/../vendor/autoload.php';
-    }
+    $file_extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
     $data = [];
-    try {
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file_path);
-        $worksheet = $spreadsheet->getActiveSheet();
-        foreach ($worksheet->toArray() as $row) {
-            $data[] = $row;
+    
+    if ($file_extension === 'xlsx') {
+        // Handle .xlsx files (ZIP-based format)
+        $zip = new ZipArchive;
+        if ($zip->open($file_path) === TRUE) {
+            // Read shared strings
+            $shared_strings = [];
+            $shared_strings_xml = $zip->getFromName('xl/sharedStrings.xml');
+            if ($shared_strings_xml) {
+                // Extract text from shared strings
+                preg_match_all('/<t[^>]*>(.*?)<\/t>/s', $shared_strings_xml, $matches);
+                $shared_strings = $matches[1];
+            }
+            
+            // Read sheet data
+            $sheet_xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+            if ($sheet_xml) {
+                // Extract row data
+                preg_match_all('/<row[^>]*>(.*?)<\/row>/s', $sheet_xml, $row_matches);
+                
+                foreach ($row_matches[1] as $row_xml) {
+                    $row_data = [];
+                    preg_match_all('/<c[^>]*><v>(.*?)<\/v><\/c>/s', $row_xml, $cell_matches);
+                    
+                    foreach ($cell_matches[1] as $cell_value) {
+                        if (preg_match('/^(\d+)$/', $cell_value)) {
+                            // Numeric value
+                            $row_data[] = $cell_value;
+                        } else {
+                            // String value (reference to shared strings)
+                            $index = (int)$cell_value;
+                            $row_data[] = isset($shared_strings[$index]) ? $shared_strings[$index] : '';
+                        }
+                    }
+                    
+                    if (!empty($row_data) && !empty(array_filter($row_data))) {
+                        $data[] = $row_data;
+                    }
+                }
+            }
+            
+            $zip->close();
         }
-    } catch (Exception $e) {
-        // fallback: return empty
+    } elseif ($file_extension === 'xls') {
+        // For .xls files, try to extract text content
+        $handle = fopen($file_path, 'rb');
+        if ($handle) {
+            $content = fread($handle, filesize($file_path));
+            fclose($handle);
+            
+            // Extract readable text from binary content
+            $text_content = '';
+            for ($i = 0; $i < strlen($content); $i++) {
+                $char = $content[$i];
+                if (ord($char) >= 32 && ord($char) <= 126) {
+                    $text_content .= $char;
+                }
+            }
+            
+            // Try to find tabular data
+            $lines = explode("\n", $text_content);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (strlen($line) > 5) {
+                    // Split by common delimiters
+                    $parts = preg_split('/[\t,;]+/', $line);
+                    if (count($parts) >= 3) {
+                        $data[] = $parts;
+                    }
+                }
+            }
+        }
     }
+    
     return $data;
-} 
+}
+?> 

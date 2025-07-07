@@ -382,47 +382,53 @@ if (isset($_GET['edit'])) {
 
       <!-- Upload Excel Modal -->
       <div class="modal" id="uploadModal">
-        <div class="modal-content">
+        <div class="modal-content upload-modal-simple">
           <div class="modal-header">
             <h3>Upload Excel File</h3>
             <button class="modal-close" id="closeUploadModal">
               <i class="fas fa-times"></i>
             </button>
           </div>
-          <form class="modal-form" id="uploadExcelForm" enctype="multipart/form-data">
-            <ul style="margin-bottom:1em;">
-              <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
-              <li>File should contain these columns (in any order):
-                <ul style="margin-top:0.3em;">
+          <div class="modal-body">
+            <div class="upload-simple-instructions">
+              <p><strong>Instructions:</strong></p>
+              <ul>
+                <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
+                <li>File should contain these columns (in any order):</li>
+                <ul>
                   <li><b>Faculty Name</b></li>
-                  <li><b>Degree</b> <span style="color:#888;">(Ph.D., M.S., M.A., B.S., B.A.)</span></li>
-                  <li><b>Sex</b> <span style="color:#888;">(Male, Female)</span></li>
+                  <li><b>Degree</b> (Ph.D., M.S., M.A., B.S., B.A.)</li>
+                  <li><b>Sex</b> (Male, Female)</li>
                   <li><b>Research Title</b></li>
-                  <li><b>Ownership</b> <span style="color:#888;">(Author, Co-Author, Contributor)</span></li>
+                  <li><b>Ownership</b> (Author, Co-Author, Contributor)</li>
                   <li><b>Presented At</b></li>
-                  <li><b>Published Date</b> <span style="color:#888;">(YYYY-MM-DD)</span></li>
+                  <li><b>Published Date</b> (YYYY-MM-DD)</li>
                   <li><b>Journal/Publication</b></li>
                 </ul>
-              </li>
-              <li>First row should contain column headers</li>
-              <li>Maximum file size: 5MB</li>
-            </ul>
-            <a href="download_template_data_collection_tools.php" target="_blank" style="margin-bottom:1em;display:inline-block;">Download Template</a>
-            <div class="form-group" style="margin-top:1em;">
-              <label for="excelFile" style="font-weight:600;">Select File</label>
+                <li>First row should contain column headers</li>
+                <li>Maximum file size: 5MB</li>
+              </ul>
+              <div class="template-download-simple">
+                <a href="download_template_data_collection_tools.php" class="template-link" download>Download Template</a>
+              </div>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data" class="upload-form-simple">
+              <label for="excelFile" class="file-label-simple">Select File</label>
               <input type="file" id="excelFile" name="excel_file" accept=".xls,.xlsx,.csv" required>
-              <div id="fileInfo" style="margin-top:0.5em; font-size:0.97em; color:#ccc;"></div>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
-              <button type="submit" class="btn btn-primary">Upload File</button>
-            </div>
-            <div id="uploadResult" style="margin-top:1em;"></div>
-            <div id="uploadLoading" style="margin-top:1em; display:none; text-align:center;">
-              <i class="fas fa-spinner fa-spin" style="font-size:1.5em;"></i>
-              <span style="margin-left:0.5em;">Uploading...</span>
-            </div>
-          </form>
+              <div class="file-info" id="fileInfo"></div>
+              <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                  <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">Uploading...</div>
+              </div>
+              <div class="upload-result" id="uploadResult" style="display: none;"></div>
+            </form>
+          </div>
+          <div class="modal-footer simple-footer">
+            <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitUpload" disabled>Upload File</button>
+          </div>
         </div>
       </div>
 
@@ -561,7 +567,95 @@ if (isset($_GET['edit'])) {
       font-size: 0.875rem;
     }
 
-    /* Simplified Upload Modal */
+
+
+    /* Hide checkboxes by default */
+    .data-table .styled-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    /* Show checkbox on row hover */
+    .data-table tr:hover .styled-checkbox,
+    .data-table tr:focus-within .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Show checkbox if checked */
+    .data-table .styled-checkbox:checked {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Show all checkboxes if table has .show-all-checkboxes (JS toggles this for bulk select) */
+    .data-table.show-all-checkboxes .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Hide select-all container by default */
+    #bulkDeleteForm .select-all-container {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes .select-all-container {
+      display: flex !important;
+      align-items: center;
+    }
+
+    /* Hide bulk delete button by default */
+    #bulkDeleteBtn {
+      display: none;
+    }
+    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
+      display: inline-block;
+    }
+
+    /* Custom styled checkbox */
+    .styled-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #232e3e;   /* dark background */
+      border: 2px solid #4285f4;   /* blue border */
+      border-radius: 6px;          /* rounded corners */
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      display: inline-block;
+      vertical-align: middle;
+      position: relative;
+    }
+
+    .styled-checkbox:focus {
+      box-shadow: 0 0 0 2px #4285f455;
+      border-color: #4285f4;
+    }
+
+    .styled-checkbox:checked {
+      background-color: #4285f4;
+      border-color: #4285f4;
+    }
+
+    /* Custom checkmark */
+    .styled-checkbox:checked::after {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 8px;
+      height: 14px;
+      border: solid #fff;
+      border-width: 0 3px 3px 0;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      box-sizing: border-box;
+    }
+
+    /* Upload Modal Styles */
     .upload-modal-simple {
       max-width: 400px;
       min-width: 0;
@@ -711,196 +805,6 @@ if (isset($_GET['edit'])) {
       gap: 0.75rem;
       justify-content: flex-end;
     }
-
-    .template-link.prominent {
-      background: var(--primary-color);
-      color: #fff;
-      font-weight: 600;
-      font-size: 1em;
-      padding: 0.6em 1.2em;
-      border-radius: 6px;
-      margin-left: 0.5em;
-      text-decoration: none;
-      display: inline-block;
-      transition: background 0.2s;
-    }
-    .template-link.prominent:hover {
-      background: var(--primary-dark);
-      color: #fff;
-    }
-    .upload-instructions ol {
-      padding-left: 1.2em;
-      color: var(--text-primary);
-      font-size: 1em;
-    }
-    .upload-instructions ul {
-      margin: 0.3em 0 0.3em 1.2em;
-      font-size: 0.97em;
-    }
-    .hint {
-      color: var(--text-secondary);
-      font-size: 0.92em;
-      font-style: italic;
-      margin-left: 0.3em;
-    }
-    .drag-area {
-      border: 2px dashed var(--primary-color);
-      background: var(--bg-secondary);
-      border-radius: 10px;
-      padding: 1.5em 0.5em;
-      text-align: center;
-      cursor: pointer;
-      margin-bottom: 1em;
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .drag-area:hover, .drag-area:focus-within {
-      border-color: var(--primary-dark);
-      background: var(--primary-light);
-    }
-    .drag-text {
-      font-size: 1.1em;
-      color: var(--text-secondary);
-      margin-top: 0.5em;
-      display: inline-block;
-    }
-    .modal-header h2 {
-      font-size: 1.4em;
-      font-weight: 700;
-      color: var(--primary-color);
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-    }
-    .upload-instructions.card-style {
-      background: var(--bg-secondary);
-      border-radius: 10px;
-      padding: 1.2em 1.2em 1em 1.2em;
-      margin-bottom: 1.2em;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    .upload-list {
-      padding-left: 1.2em;
-      margin-bottom: 0.7em;
-      color: var(--text-primary);
-      font-size: 1em;
-    }
-    .upload-list ul {
-      margin: 0.3em 0 0.3em 1.2em;
-      font-size: 0.97em;
-    }
-    .template-link.simple-link {
-      color: var(--primary-color);
-      font-weight: 500;
-      text-decoration: underline;
-      font-size: 1em;
-      margin-top: 0.5em;
-      display: inline-block;
-    }
-    .template-link.simple-link:hover {
-      color: var(--primary-dark);
-    }
-    .file-label-simple {
-      font-size: 1em;
-      color: var(--text-primary);
-    }
-    .hint {
-      color: var(--text-secondary);
-      font-size: 0.92em;
-      font-style: italic;
-      margin-left: 0.3em;
-    }
-    .modal-header h3 {
-      font-size: 1.2em;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin: 0;
-    }
-
-    /* Hide checkboxes by default */
-    .data-table .styled-checkbox {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-
-    /* Show checkbox on row hover */
-    .data-table tr:hover .styled-checkbox,
-    .data-table tr:focus-within .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Show checkbox if checked */
-    .data-table .styled-checkbox:checked {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Show all checkboxes if table has .show-all-checkboxes (JS toggles this for bulk select) */
-    .data-table.show-all-checkboxes .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Hide select-all container by default */
-    #bulkDeleteForm .select-all-container {
-      display: none;
-    }
-    #bulkDeleteForm.show-all-checkboxes .select-all-container {
-      display: flex !important;
-      align-items: center;
-    }
-
-    /* Hide bulk delete button by default */
-    #bulkDeleteBtn {
-      display: none;
-    }
-    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
-      display: inline-block;
-    }
-
-    /* Custom styled checkbox */
-    .styled-checkbox {
-      appearance: none;
-      -webkit-appearance: none;
-      background-color: #232e3e;   /* dark background */
-      border: 2px solid #4285f4;   /* blue border */
-      border-radius: 6px;          /* rounded corners */
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      display: inline-block;
-      vertical-align: middle;
-      position: relative;
-    }
-
-    .styled-checkbox:focus {
-      box-shadow: 0 0 0 2px #4285f455;
-      border-color: #4285f4;
-    }
-
-    .styled-checkbox:checked {
-      background-color: #4285f4;
-      border-color: #4285f4;
-    }
-
-    /* Custom checkmark */
-    .styled-checkbox:checked::after {
-      content: '';
-      display: block;
-      position: absolute;
-      left: 6px;
-      top: 2px;
-      width: 8px;
-      height: 14px;
-      border: solid #fff;
-      border-width: 0 3px 3px 0;
-      border-radius: 1px;
-      transform: rotate(45deg);
-      box-sizing: border-box;
-    }
   </style>
 
   <script src="../js/theme.js"></script>
@@ -965,12 +869,16 @@ if (isset($_GET['edit'])) {
     // Modal functionality
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
+    const uploadModal = document.getElementById('uploadModal');
     const addBtn = document.getElementById('addBtn');
     const addFirstBtn = document.getElementById('addFirstBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
     const closeAddModal = document.getElementById('closeAddModal');
     const closeEditModal = document.getElementById('closeEditModal');
+    const closeUploadModal = document.getElementById('closeUploadModal');
     const cancelAdd = document.getElementById('cancelAdd');
     const cancelEdit = document.getElementById('cancelEdit');
+    const cancelUpload = document.getElementById('cancelUpload');
 
     function openModal(modal) {
       modal.style.display = 'flex';
@@ -984,13 +892,16 @@ if (isset($_GET['edit'])) {
 
     addBtn.addEventListener('click', () => openModal(addModal));
     if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
+    uploadBtn.addEventListener('click', () => openModal(uploadModal));
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     cancelAdd.addEventListener('click', () => closeModal(addModal));
     closeEditModal.addEventListener('click', () => closeModal(editModal));
     cancelEdit.addEventListener('click', () => closeModal(editModal));
+    closeUploadModal.addEventListener('click', () => closeModal(uploadModal));
+    cancelUpload.addEventListener('click', () => closeModal(uploadModal));
 
     // Close modal when clicking outside
-    [addModal, editModal].forEach(modal => {
+    [addModal, editModal, uploadModal].forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
           closeModal(modal);
@@ -1045,68 +956,131 @@ if (isset($_GET['edit'])) {
       });
     });
 
-    // Upload Excel AJAX logic (refactored for consistency)
-    const uploadExcelForm = document.getElementById('uploadExcelForm');
-    const uploadResult = document.getElementById('uploadResult');
-    const uploadLoading = document.getElementById('uploadLoading');
-    const excelFileInput = document.getElementById('excelFile');
+    // Upload functionality
+    const excelFile = document.getElementById('excelFile');
     const fileInfo = document.getElementById('fileInfo');
-    if (excelFileInput && fileInfo) {
-      excelFileInput.addEventListener('change', function() {
-        if (excelFileInput.files && excelFileInput.files.length > 0) {
-          const file = excelFileInput.files[0];
-          fileInfo.innerHTML = `<b>Selected file:</b> ${file.name}<br>Size: ${(file.size/1024/1024).toFixed(2)} MB<br>Type: ${file.type || 'N/A'}`;
-        } else {
-          fileInfo.textContent = '';
-        }
-      });
-    }
-    if (uploadExcelForm) {
-      uploadExcelForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        uploadResult.textContent = '';
+    const submitUpload = document.getElementById('submitUpload');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadResult = document.getElementById('uploadResult');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
+
+    // File selection handler
+    excelFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        fileInfo.innerHTML = `
+          <strong>Selected file:</strong> ${file.name}<br>
+          <strong>Size:</strong> ${fileSize} MB<br>
+          <strong>Type:</strong> ${file.type || 'Unknown'}
+        `;
+        submitUpload.disabled = false;
+        
+        // Hide any previous results
         uploadResult.style.display = 'none';
-        uploadLoading.style.display = 'block';
-        const formData = new FormData(uploadExcelForm);
-        fetch('upload_excel_data_collection_tools.php', {
+      } else {
+        fileInfo.innerHTML = '';
+        submitUpload.disabled = true;
+      }
+    });
+
+    // Upload submission handler
+    submitUpload.addEventListener('click', async () => {
+      const file = excelFile.files[0];
+      if (!file) return;
+
+      // Show progress
+      uploadProgress.style.display = 'block';
+      uploadResult.style.display = 'none';
+      submitUpload.disabled = true;
+      
+      // Simulate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+        progressFill.style.width = progress + '%';
+      }, 200);
+
+      try {
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        const response = await fetch('upload_excel_data_collection_tools.php', {
           method: 'POST',
           body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          uploadLoading.style.display = 'none';
+        });
+
+        const result = await response.json();
+        
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        // Show result
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
           uploadResult.style.display = 'block';
-          if (data.success) {
+          
+          if (result.success) {
+            uploadResult.className = 'upload-result success';
             uploadResult.innerHTML = `
-              <div style="background:#1e4620; color:#d4f8e8; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #2ecc40;">
-                <i class='fas fa-check-circle' style='font-size:1.5em; color:#2ecc40;'></i>
-                <div><b>Success!</b> ${data.message}</div>
-              </div>
+              <i class="fas fa-check-circle"></i>
+              <strong>Success!</strong> ${result.message}
+              ${result.data.errors && result.data.errors.length > 0 ? 
+                `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
             `;
-            setTimeout(() => { window.location.reload(); }, 1800);
+            
+            // Reload page after successful upload to show new data
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           } else {
+            uploadResult.className = 'upload-result error';
             uploadResult.innerHTML = `
-              <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:flex-start; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
-                <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
-                <div><b>Error!</b> ${data.message}
-                  ${(data.data && data.data.errors) ? '<ul style='margin:0.5em 0 0 1.2em; color:#ffd6d6;'>' + data.data.errors.map(e => '<li>' + e + '</li>').join('') + '</ul>' : ''}
-                </div>
-              </div>
+              <i class="fas fa-exclamation-circle"></i>
+              <strong>Error:</strong> ${result.message}
             `;
           }
-        })
-        .catch(err => {
-          uploadLoading.style.display = 'none';
-          uploadResult.style.display = 'block';
-          uploadResult.innerHTML = `
-            <div style="background:#4d2323; color:#ffd6d6; border-radius:8px; padding:1em; display:flex; align-items:center; gap:0.7em; font-size:1.08em; border:1.5px solid #e74c3c;">
-              <i class='fas fa-exclamation-circle' style='font-size:1.5em; color:#e74c3c;'></i>
-              <div><b>Error!</b> Upload failed.</div>
-            </div>
-          `;
-        });
-      });
+          
+          submitUpload.disabled = false;
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        uploadProgress.style.display = 'none';
+        uploadResult.style.display = 'block';
+        uploadResult.className = 'upload-result error';
+        uploadResult.innerHTML = `
+          <i class="fas fa-exclamation-circle"></i>
+          <strong>Error:</strong> Upload failed. Please try again.
+        `;
+        submitUpload.disabled = false;
+      }
+    });
+
+    // Reset upload form when modal is closed
+    function resetUploadForm() {
+      excelFile.value = '';
+      fileInfo.innerHTML = '';
+      uploadProgress.style.display = 'none';
+      uploadResult.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      submitUpload.disabled = true;
     }
+
+    // Add reset to close handlers
+    closeUploadModal.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
+    
+    cancelUpload.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
 
     // Bulk delete button enable/disable
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
