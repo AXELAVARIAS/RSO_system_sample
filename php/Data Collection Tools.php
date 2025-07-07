@@ -171,14 +171,17 @@ if (isset($_GET['edit'])) {
             <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
           </div>
           <div class="profile-actions">
+            <label class="theme-switch" title="Toggle Theme">
+              <input type="checkbox" id="themeSwitchInput" style="display:none;">
+              <span class="slider">
+                <i class="fa-solid fa-moon moon-icon"></i>
+                <i class="fa-solid fa-sun sun-icon"></i>
+              </span>
+            </label>
             <a href="edit_profile.php" class="profile-action">
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
-            <button class="profile-action theme-toggle" id="themeToggle" title="Toggle Theme">
-              <i class="fas fa-moon"></i>
-              <span>Dark Mode</span>
-            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>

@@ -94,6 +94,26 @@ class ThemeManager {
 // Initialize theme manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.themeManager = new ThemeManager();
+
+    // Custom theme switch logic
+    const themeSwitchInput = document.getElementById('themeSwitchInput');
+    if (themeSwitchInput) {
+        // Set initial state based on current theme
+        const currentTheme = window.themeManager.getCurrentTheme();
+        themeSwitchInput.checked = (currentTheme === 'dark');
+
+        // Update theme when switch is toggled
+        themeSwitchInput.addEventListener('change', () => {
+            window.themeManager.toggleTheme();
+        });
+
+        // Listen for theme changes and update switch
+        const observer = new MutationObserver(() => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            themeSwitchInput.checked = (theme === 'dark');
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    }
 });
 
 // Export for use in other scripts

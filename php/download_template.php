@@ -9,59 +9,30 @@ if (empty($_SESSION['logged_in'])) {
     exit;
 }
 
-// Set headers for CSV download
+// Data Collection Tools template download
 header('Content-Type: text/csv');
-header('Content-Disposition: attachment; filename="research_capacity_template.csv"');
-header('Cache-Control: no-cache, must-revalidate');
-header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
-
-// Create output stream
+header('Content-Disposition: attachment; filename="data_collection_tools_template.csv"');
 $output = fopen('php://output', 'w');
-
-// Write header row (no BOM, no extra spaces)
 fputcsv($output, [
-    'Date',
-    'Activity Name',
-    'Venue',
-    'Facilitators',
-    'Number of Participants',
-    'Status'
-]);
-
-// Write sample data rows (both YYYY-MM-DD and DD/MM/YYYY formats)
-fputcsv($output, [
-    '2024-01-15',
-    'Research Methodology Workshop',
-    'Conference Room A',
-    'Dr. John Smith',
-    '25',
-    'Completed'
+    'Faculty Name',
+    'Degree',
+    'Sex',
+    'Research Title',
+    'Ownership',
+    'Presented At',
+    'Published Date',
+    'Journal/Publication'
 ]);
 fputcsv($output, [
-    '15/01/2024',
-    'Data Analysis Training',
-    'Computer Lab 101',
-    'Prof. Jane Doe',
-    '15',
-    'In Progress'
+    'John Doe',
+    'Ph.D.',
+    'Male',
+    'Sample Research Title',
+    'Author',
+    'International Conference 2024',
+    '2024-05-01',
+    'Journal of Research'
 ]);
-fputcsv($output, [
-    '2024-01-25',
-    'Academic Writing Seminar',
-    'Auditorium',
-    'Dr. Robert Johnson',
-    '40',
-    'Scheduled'
-]);
-fputcsv($output, [
-    '01/02/2024',
-    'Research Ethics Training',
-    'Seminar Room 3',
-    'Dr. Sarah Wilson',
-    '30',
-    'Scheduled'
-]);
-
-// Close the file
 fclose($output);
+exit;
 ?> 

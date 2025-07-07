@@ -280,11 +280,6 @@ $max_activities = max($activity_by_month) ?: 1;
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fa-solid fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -315,6 +310,17 @@ $max_activities = max($activity_by_month) ?: 1;
             <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
           </div>
           <div class="profile-actions">
+            <!-- Theme Toggle Switch -->
+            <button class="theme-toggle" title="Toggle Theme" style="margin-left:0;display:none;">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+            <label class="theme-switch" title="Toggle Theme">
+              <input type="checkbox" id="themeSwitchInput" style="display:none;">
+              <span class="slider">
+                <i class="fa-solid fa-moon moon-icon"></i>
+                <i class="fa-solid fa-sun sun-icon"></i>
+              </span>
+            </label>
             <a href="php/edit_profile.php" class="profile-action">
               <i class="fa-solid fa-user-pen"></i>
               Edit Profile
