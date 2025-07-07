@@ -208,22 +208,16 @@ $current_email = $_SESSION['user_email'] ?? '';
             margin-top: 1.5rem;
         }
         
-        .upload-btn {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-weight: 500;
-            transition: background 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
+       
         .upload-btn:hover {
-            background: var(--primary-hover);
+            /* background: #333333; */
+            /* Use .btn-primary:hover for hover effect */
+        }
+        [data-theme="dark"] .upload-btn {
+            /* background: var(--primary-color); */
+        }
+        [data-theme="dark"] .upload-btn:hover {
+            /* background: var(--primary-hover); */
         }
         
         .upload-note {
@@ -422,7 +416,7 @@ $current_email = $_SESSION['user_email'] ?? '';
                     <div class="upload-section">
                         <form method="post" enctype="multipart/form-data" id="profilePicForm">
                             <input type="file" name="profile_picture" id="profilePicInput" accept="image/*" style="display: none;" onchange="document.getElementById('profilePicForm').submit();">
-                            <button type="button" class="upload-btn" onclick="document.getElementById('profilePicInput').click();">
+                            <button type="button" class="btn btn-primary upload-btn" onclick="document.getElementById('profilePicInput').click();">
                                 <i class="fas fa-upload"></i>
                                 Upload New Image
                             </button>
