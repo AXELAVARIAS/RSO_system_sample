@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Include database configuration
+require_once '../database/config.php';
+
 if (empty($_SESSION['logged_in'])) {
     header('Location: loginpage.php');
     exit;
@@ -9,100 +13,73 @@ if (isset($_POST['logout'])) {
     header('Location: loginpage.php');
     exit;
 }
-// File to store entries
-$data_file = __DIR__ . '/kpi_records.csv';
+
+$success_message = '';
+$error_message = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle delete
-    if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
+    try {
+        $db = getDB();
+        
+        // Handle delete
+        if (isset($_POST['delete']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $db->query("DELETE FROM kpi_records WHERE id = ?", [$id]);
+            $success_message = 'KPI record deleted successfully!';
         }
-        $index = (int)$_POST['index'];
-        if (isset($entries[$index])) {
-            array_splice($entries, $index, 1);
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+        // Handle edit save
+        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $faculty_name = $_POST['faculty_name'] ?? '';
+            $period = $_POST['period'] ?? '';
+            $publications = $_POST['publications'] ?? '';
+            $trainings = $_POST['trainings'] ?? '';
+            $presentations = $_POST['presentations'] ?? '';
+            $kpi_score = $_POST['kpi_score'] ?? '';
+            $performance = $_POST['performance'] ?? '';
+            
+            if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
+                $db->query("UPDATE kpi_records SET faculty_name = ?, quarter = ?, publications_count = ?, presentations_count = ?, research_projects_count = ?, performance_score = ?, performance_rating = ? WHERE id = ?", 
+                    [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance, $id]);
+                $success_message = 'KPI record updated successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Handle add
+        else {
+            $faculty_name = $_POST['faculty_name'] ?? '';
+            $period = $_POST['period'] ?? '';
+            $publications = $_POST['publications'] ?? '';
+            $trainings = $_POST['trainings'] ?? '';
+            $presentations = $_POST['presentations'] ?? '';
+            $kpi_score = $_POST['kpi_score'] ?? '';
+            $performance = $_POST['performance'] ?? '';
+            
+            if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
+                $db->query("INSERT INTO kpi_records (faculty_name, quarter, publications_count, presentations_count, research_projects_count, performance_score, performance_rating) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                    [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance]);
+                $success_message = 'KPI record added successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
+            }
+        }
+    } catch (Exception $e) {
+        $error_message = 'Database error: ' . $e->getMessage();
     }
-    // Handle edit save
-    if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
-        $index = (int)$_POST['index'];
-        $faculty_name = $_POST['faculty_name'] ?? '';
-        $period = $_POST['period'] ?? '';
-        $publications = $_POST['publications'] ?? '';
-        $trainings = $_POST['trainings'] ?? '';
-        $presentations = $_POST['presentations'] ?? '';
-        $kpi_score = $_POST['kpi_score'] ?? '';
-        $performance = $_POST['performance'] ?? '';
-        if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
-            $entries[$index] = [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance];
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
-            }
-            fclose($fp);
-        }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-    // Handle add
-    $faculty_name = $_POST['faculty_name'] ?? '';
-    $period = $_POST['period'] ?? '';
-    $publications = $_POST['publications'] ?? '';
-    $trainings = $_POST['trainings'] ?? '';
-    $presentations = $_POST['presentations'] ?? '';
-    $kpi_score = $_POST['kpi_score'] ?? '';
-    $performance = $_POST['performance'] ?? '';
-    if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
-        $entry = [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance];
-        $fp = fopen($data_file, 'a');
-        fputcsv($fp, $entry);
-        fclose($fp);
-    }
+    
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Predefined entries (optional, can be removed or edited)
-$default_entries = [
-    ['Dr. Sarah Johnson', 'Q1 2025', '3', '2', '1', '95', 'Excellent'],
-    ['Prof. Michael Chen', 'Q1 2025', '2', '1', '2', '88', 'Good'],
-    ['Dr. Emily Rodriguez', 'Q1 2025', '4', '3', '2', '99', 'Outstanding'],
-];
-
-// Read all entries
+// Read all entries from database
 $entries = [];
-if (file_exists($data_file)) {
-    $fp = fopen($data_file, 'r');
-    $is_first_row = true;
-    while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // Skip header row
-        }
-        $entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $entries = $db->fetchAll("SELECT * FROM kpi_records ORDER BY quarter DESC, faculty_name ASC");
+} catch (Exception $e) {
+    $error_message = 'Failed to load KPI records: ' . $e->getMessage();
 }
 
 // Check if editing
@@ -161,11 +138,6 @@ if (isset($_GET['edit'])) {
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fas fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -201,6 +173,10 @@ if (isset($_GET['edit'])) {
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
+            <button class="profile-action theme-toggle" id="themeToggle">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -257,20 +233,28 @@ if (isset($_GET['edit'])) {
               <input type="number" id="publications" name="publications" required placeholder="Enter number of publications">
             </div>
             <div class="form-group">
-              <label for="trainings">Trainings</label>
-              <input type="number" id="trainings" name="trainings" required placeholder="Enter number of trainings">
+              <label for="trainings">Presentations</label>
+              <input type="number" id="trainings" name="trainings" required placeholder="Enter number of presentations">
             </div>
             <div class="form-group">
-              <label for="presentations">Presentations</label>
-              <input type="number" id="presentations" name="presentations" required placeholder="Enter number of presentations">
+              <label for="presentations">Research Projects</label>
+              <input type="number" id="presentations" name="presentations" required placeholder="Enter number of research projects">
             </div>
             <div class="form-group">
               <label for="kpi_score">KPI Score</label>
               <input type="number" id="kpi_score" name="kpi_score" required placeholder="Enter KPI score">
             </div>
             <div class="form-group">
-              <label for="performance">Performance</label>
-              <input type="text" id="performance" name="performance" required placeholder="Enter performance">
+              <label for="performance">Performance Rating</label>
+              <select id="performance" name="performance" required>
+                <option value="">Select performance rating</option>
+                <option value="Poor">Poor</option>
+                <option value="Fair">Fair</option>
+                <option value="Good">Good</option>
+                <option value="Very Good">Very Good</option>
+                <option value="Excellent">Excellent</option>
+                <option value="Outstanding">Outstanding</option>
+              </select>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
@@ -291,7 +275,7 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="" id="editForm">
             <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="index" id="editIndex">
+            <input type="hidden" name="id" id="editId">
             <div class="form-group">
               <label for="editFacultyName">Faculty Name</label>
               <input type="text" id="editFacultyName" name="faculty_name" required>
@@ -305,11 +289,11 @@ if (isset($_GET['edit'])) {
               <input type="number" id="editPublications" name="publications" required>
             </div>
             <div class="form-group">
-              <label for="editTrainings">Trainings</label>
+              <label for="editTrainings">Presentations</label>
               <input type="number" id="editTrainings" name="trainings" required>
             </div>
             <div class="form-group">
-              <label for="editPresentations">Presentations</label>
+              <label for="editPresentations">Research Projects</label>
               <input type="number" id="editPresentations" name="presentations" required>
             </div>
             <div class="form-group">
@@ -317,8 +301,15 @@ if (isset($_GET['edit'])) {
               <input type="number" id="editKpiScore" name="kpi_score" required>
             </div>
             <div class="form-group">
-              <label for="editPerformance">Performance</label>
-              <input type="text" id="editPerformance" name="performance" required>
+              <label for="editPerformance">Performance Rating</label>
+              <select id="editPerformance" name="performance" required>
+                <option value="Poor">Poor</option>
+                <option value="Fair">Fair</option>
+                <option value="Good">Good</option>
+                <option value="Very Good">Very Good</option>
+                <option value="Excellent">Excellent</option>
+                <option value="Outstanding">Outstanding</option>
+              </select>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
@@ -348,8 +339,8 @@ if (isset($_GET['edit'])) {
                 <th>Faculty Name</th>
                 <th>Period</th>
                 <th>Publications</th>
-                <th>Trainings</th>
                 <th>Presentations</th>
+                <th>Research Projects</th>
                 <th>KPI Score</th>
                 <th>Performance</th>
                 <th>Actions</th>
@@ -372,46 +363,46 @@ if (isset($_GET['edit'])) {
                 </tr>
               <?php else: ?>
                 <?php foreach ($entries as $i => $entry): ?>
-                <tr data-index="<?php echo $i; ?>">
+                <tr data-id="<?php echo $entry['id']; ?>">
                   <td data-label="Faculty Name">
                     <div class="kpi-name">
-                      <strong><?php echo htmlspecialchars($entry[0] ?? ''); ?></strong>
+                      <strong><?php echo htmlspecialchars($entry['faculty_name']); ?></strong>
                     </div>
                   </td>
                   <td data-label="Period">
-                    <span class="period-info"><?php echo htmlspecialchars($entry[1] ?? ''); ?></span>
+                    <span class="period-info"><?php echo htmlspecialchars($entry['quarter']); ?></span>
                   </td>
                   <td data-label="Publications">
-                    <span class="target-value"><?php echo htmlspecialchars($entry[2] ?? ''); ?></span>
+                    <span class="target-value"><?php echo htmlspecialchars($entry['publications_count']); ?></span>
                   </td>
                   <td data-label="Trainings">
-                    <span class="actual-value"><?php echo htmlspecialchars($entry[3] ?? ''); ?></span>
+                    <span class="actual-value"><?php echo htmlspecialchars($entry['presentations_count']); ?></span>
                   </td>
                   <td data-label="Presentations">
-                    <?php echo htmlspecialchars($entry[4] ?? ''); ?>
+                    <?php echo htmlspecialchars($entry['research_projects_count']); ?>
                   </td>
                   <td data-label="KPI Score">
-                    <?php echo htmlspecialchars($entry[5] ?? ''); ?>
+                    <?php echo htmlspecialchars($entry['performance_score']); ?>
                   </td>
                   <td data-label="Performance">
-                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[6] ?? '')); ?>">
-                      <?php echo htmlspecialchars($entry[6] ?? ''); ?>
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['performance_rating'])); ?>">
+                      <?php echo htmlspecialchars($entry['performance_rating']); ?>
                     </span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-faculty-name="<?php echo htmlspecialchars($entry[0] ?? ''); ?>"
-                              data-period="<?php echo htmlspecialchars($entry[1] ?? ''); ?>"
-                              data-publications="<?php echo htmlspecialchars($entry[2] ?? ''); ?>"
-                              data-trainings="<?php echo htmlspecialchars($entry[3] ?? ''); ?>"
-                              data-presentations="<?php echo htmlspecialchars($entry[4] ?? ''); ?>"
-                              data-kpi-score="<?php echo htmlspecialchars($entry[5] ?? ''); ?>"
-                              data-performance="<?php echo htmlspecialchars($entry[6] ?? ''); ?>">
+                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                              data-faculty-name="<?php echo htmlspecialchars($entry['faculty_name']); ?>"
+                              data-period="<?php echo htmlspecialchars($entry['quarter']); ?>"
+                              data-publications="<?php echo htmlspecialchars($entry['publications_count']); ?>"
+                              data-trainings="<?php echo htmlspecialchars($entry['presentations_count']); ?>"
+                              data-presentations="<?php echo htmlspecialchars($entry['research_projects_count']); ?>"
+                              data-kpi-score="<?php echo htmlspecialchars($entry['performance_score']); ?>"
+                              data-performance="<?php echo htmlspecialchars($entry['performance_rating']); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this KPI record?');">
-                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
                         <button type="submit" name="delete" class="action-btn delete-btn">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -518,7 +509,7 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const index = btn.dataset.index;
+        const id = btn.dataset.id;
         const facultyName = btn.dataset.facultyName;
         const period = btn.dataset.period;
         const publications = btn.dataset.publications;
@@ -527,7 +518,7 @@ if (isset($_GET['edit'])) {
         const kpiScore = btn.dataset.kpiScore;
         const performance = btn.dataset.performance;
 
-        document.getElementById('editIndex').value = index;
+        document.getElementById('editId').value = id;
         document.getElementById('editFacultyName').value = facultyName;
         document.getElementById('editPeriod').value = period;
         document.getElementById('editPublications').value = publications;
@@ -537,6 +528,35 @@ if (isset($_GET['edit'])) {
         document.getElementById('editPerformance').value = performance;
 
         openModal(editModal);
+      }
+    });
+
+    // Dark mode toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const themeText = themeToggle.querySelector('span');
+    
+    // Check current theme
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+      themeIcon.className = 'fas fa-sun';
+      themeText.textContent = 'Light Mode';
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.body.classList.contains('dark-theme');
+      
+      if (isDark) {
+        document.body.classList.remove('dark-theme');
+        localStorage.setItem('theme', 'light');
+        themeIcon.className = 'fas fa-moon';
+        themeText.textContent = 'Dark Mode';
+      } else {
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+        themeIcon.className = 'fas fa-sun';
+        themeText.textContent = 'Light Mode';
       }
     });
 

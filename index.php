@@ -10,176 +10,227 @@ if (isset($_POST['logout'])) {
     header('Location: php/loginpage.php');
     exit;
 }
-// Count publications from CSV
+// Count publications from database
+require_once __DIR__ . '/database/config.php';
+$db = getDB();
 $publications_count = 0;
-$pub_file = __DIR__ . '/php/publication_presentation.csv';
-if (file_exists($pub_file)) {
-    $file = fopen($pub_file, 'r');
-    $is_first_row = true;
-    while (($row = fgetcsv($file)) !== false) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // Skip header
-        }
-        if (!empty($row) && !empty(array_filter($row))) {
-            $publications_count++;
-        }
-    }
-    fclose($file);
+try {
+    $result = $db->fetch('SELECT COUNT(*) as count FROM publication_presentations');
+    $publications_count = $result['count'] ?? 0;
+} catch (Exception $e) {
+    $publications_count = 0;
 }
-// Gather recent updates from multiple sources
+
+// Gather recent updates from database
 $recent_updates = [];
-// Publications (show last 3)
-if (file_exists($pub_file)) {
-    $rows = [];
-    $file = fopen($pub_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && !empty($row[0])) {
-            $rows[] = $row;
-        }
-    }
-    fclose($file);
-    $recent_pubs = array_slice($rows, -3); // get last 3
-    foreach ($recent_pubs as $row) {
+
+// Research Activities from database
+try {
+    $research_activities = $db->fetchAll('
+        SELECT 
+            activity_date as date,
+            activity_title as title,
+            venue,
+            organizer,
+            status,
+            created_at,
+            "Research Activity" as type
+        FROM research_capacity_activities 
+        ORDER BY created_at DESC 
+        LIMIT 3
+    ');
+    
+    foreach ($research_activities as $activity) {
         $recent_updates[] = [
-            'date' => $row[0],
-            'title' => isset($row[2]) ? $row[2] : '',
-            'meta' => 'Publication • ' . (isset($row[1]) ? $row[1] : ''),
+            'date' => $activity['date'],
+            'title' => $activity['title'],
+            'meta' => 'Research Activity • ' . $activity['organizer'],
+            'type' => 'Research Activity',
+            'upload_date' => $activity['created_at'],
+            'status' => $activity['status']
+        ];
+    }
+} catch (Exception $e) {
+    // Handle error silently
+}
+
+// Ethics Protocols from database
+try {
+    $ethics_protocols = $db->fetchAll('
+        SELECT 
+            protocol_number,
+            title,
+            department,
+            status,
+            created_at,
+            "Ethics Protocol" as type
+        FROM ethics_reviewed_protocols 
+        ORDER BY created_at DESC 
+        LIMIT 3
+    ');
+    
+    foreach ($ethics_protocols as $protocol) {
+        $recent_updates[] = [
+            'date' => date('Y-m-d', strtotime($protocol['created_at'])),
+            'title' => $protocol['title'],
+            'meta' => 'Ethics Protocol • ' . $protocol['department'],
+            'type' => 'Ethics Protocol',
+            'upload_date' => $protocol['created_at'],
+            'status' => $protocol['status']
+        ];
+    }
+} catch (Exception $e) {
+    // Handle error silently
+}
+
+// Publications from database
+try {
+    $publications = $db->fetchAll('
+        SELECT 
+            application_date as date,
+            paper_title as title,
+            author_name,
+            department,
+            status,
+            created_at,
+            "Publication" as type
+        FROM publication_presentations 
+        ORDER BY created_at DESC 
+        LIMIT 3
+    ');
+    
+    foreach ($publications as $publication) {
+        $recent_updates[] = [
+            'date' => $publication['date'],
+            'title' => $publication['title'],
+            'meta' => 'Publication • ' . $publication['author_name'],
             'type' => 'Publication',
+            'upload_date' => $publication['created_at'],
+            'status' => $publication['status']
         ];
     }
+} catch (Exception $e) {
+    // Handle error silently
 }
-// Research Activities
-$research_file = __DIR__ . '/php/research_capacity_data.csv';
-if (file_exists($research_file)) {
-    $file = fopen($research_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && !empty($row[0])) {
-            $recent_updates[] = [
-                'date' => $row[0],
-                'title' => $row[1],
-                'meta' => 'Research Activity • ' . $row[3],
-                'type' => 'Research Activity',
-            ];
-        }
-    }
-    fclose($file);
-}
-// Ethics Protocols (no date, use last 3 rows as latest, skip header)
-$ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
-if (file_exists($ethics_file)) {
-    $rows = [];
-    $file = fopen($ethics_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row)) {
-            $rows[] = $row;
-        }
-    }
-    fclose($file);
-    if (!empty($rows)) {
-        $recent_ethics = array_slice($rows, -3); // get last 3
-        foreach ($recent_ethics as $ethics) {
-            // Defensive: check if columns exist
-            $title = isset($ethics[1]) ? $ethics[1] : '';
-            $meta = isset($ethics[2]) ? $ethics[2] : '';
-            // Use current date as fallback for missing date
-            $ethics_date = isset($ethics[0]) && !empty($ethics[0]) ? $ethics[0] : date('Y-m-d');
-            $recent_updates[] = [
-                'date' => $ethics_date,
-                'title' => $title,
-                'meta' => 'Ethics Protocol • ' . $meta,
-                'type' => 'Ethics Protocol',
-            ];
-        }
-    }
-}
-// KPI Records (period as date, use last row)
-$kpi_file = __DIR__ . '/php/kpi_records.csv';
-if (file_exists($kpi_file)) {
-    $rows = [];
-    $file = fopen($kpi_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row)) {
-            $rows[] = $row;
-        }
-    }
-    fclose($file);
-    if (!empty($rows)) {
-        $last = end($rows);
+
+// KPI Records from database
+try {
+    $kpi_records = $db->fetchAll('
+        SELECT 
+            faculty_name,
+            quarter,
+            performance_score,
+            performance_rating,
+            created_at,
+            "KPI" as type
+        FROM kpi_records 
+        ORDER BY created_at DESC 
+        LIMIT 2
+    ');
+    
+    foreach ($kpi_records as $kpi) {
         $recent_updates[] = [
-            'date' => $last[1],
-            'title' => 'KPI Update: ' . $last[0],
-            'meta' => 'KPI Update • ' . $last[6],
+            'date' => date('Y-m-d', strtotime($kpi['created_at'])),
+            'title' => 'KPI Update: ' . $kpi['faculty_name'],
+            'meta' => 'KPI Update • ' . $kpi['quarter'] . ' - Score: ' . $kpi['performance_score'],
             'type' => 'KPI',
+            'upload_date' => $kpi['created_at'],
+            'status' => $kpi['performance_rating']
         ];
     }
+} catch (Exception $e) {
+    // Handle error silently
 }
-// Count ethics protocols from CSV (skip header)
+
+// Data Collection Tools from database
+try {
+    $data_tools = $db->fetchAll('
+        SELECT 
+            submission_date as date,
+            research_title as title,
+            researcher_name,
+            research_area,
+            created_at,
+            "Data Collection Tool" as type
+        FROM data_collection_tools 
+        ORDER BY created_at DESC 
+        LIMIT 2
+    ');
+    
+    foreach ($data_tools as $tool) {
+        $recent_updates[] = [
+            'date' => $tool['date'],
+            'title' => $tool['title'],
+            'meta' => 'Data Collection Tool • ' . $tool['researcher_name'],
+            'type' => 'Data Collection Tool',
+            'upload_date' => $tool['created_at'],
+            'status' => $tool['research_area']
+        ];
+    }
+} catch (Exception $e) {
+    // Handle error silently
+}
+
+// Count ethics protocols from database
 $ethics_count = 0;
-$ethics_file = __DIR__ . '/php/ethics_reviewed_protocols.csv';
-if (file_exists($ethics_file)) {
-    $file = fopen($ethics_file, 'r');
-    // Always skip the first row (header)
-    fgetcsv($file);
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && !empty(array_filter($row))) {
-            $ethics_count++;
-        }
-    }
-    fclose($file);
+try {
+    $result = $db->fetch('SELECT COUNT(*) as count FROM ethics_reviewed_protocols');
+    $ethics_count = $result['count'] ?? 0;
+} catch (Exception $e) {
+    $ethics_count = 0;
 }
-// Count research activities from CSV
+// Count research activities from database
 $research_count = 0;
-$research_file = __DIR__ . '/php/research_capacity_data.csv';
-if (file_exists($research_file)) {
-    $file = fopen($research_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && !empty(array_filter($row))) {
-            $research_count++;
-        }
-    }
-    fclose($file);
+try {
+    $result = $db->fetch('SELECT COUNT(*) as count FROM research_capacity_activities');
+    $research_count = $result['count'] ?? 0;
+} catch (Exception $e) {
+    $research_count = 0;
 }
-// Calculate average KPI score from CSV
-$kpi_scores = [];
-$kpi_file = __DIR__ . '/php/kpi_records.csv';
-if (file_exists($kpi_file)) {
-    $file = fopen($kpi_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && isset($row[5]) && is_numeric($row[5])) {
-            $kpi_scores[] = floatval($row[5]);
-        }
-    }
-    fclose($file);
+// Calculate average KPI score from database
+$average_kpi = 0;
+try {
+    $result = $db->fetch('SELECT AVG(performance_score) as avg_score FROM kpi_records WHERE performance_score IS NOT NULL');
+    $average_kpi = $result['avg_score'] !== null ? round($result['avg_score'], 2) : 0;
+} catch (Exception $e) {
+    $average_kpi = 0;
 }
-$average_kpi = count($kpi_scores) ? round(array_sum($kpi_scores) / count($kpi_scores), 2) : 0;
-// Sort by date (descending, where possible)
-function parse_date($d) {
-    if (preg_match('/\d{4}-\d{2}-\d{2}/', $d)) return strtotime($d);
-    if (preg_match('/\d{4}/', $d)) return strtotime(str_replace(' -', '-01-01', $d));
-    return 0;
+
+// Count data collection tools from database
+$data_collection_count = 0;
+try {
+    $result = $db->fetch('SELECT COUNT(*) as count FROM data_collection_tools');
+    $data_collection_count = $result['count'] ?? 0;
+} catch (Exception $e) {
+    $data_collection_count = 0;
 }
+
+// Sort by upload date (descending)
 usort($recent_updates, function($a, $b) {
-    return parse_date($b['date']) <=> parse_date($a['date']);
+    return strtotime($b['upload_date']) <=> strtotime($a['upload_date']);
 });
 $recent_updates = array_slice($recent_updates, 0, 5);
-// Build research activity trends by month for the current year
+
+// Build research activity trends by month for the current year from database
 $activity_by_month = array_fill(1, 12, 0);
 $current_year = date('Y');
-if (file_exists($research_file)) {
-    $file = fopen($research_file, 'r');
-    while (($row = fgetcsv($file)) !== false) {
-        if (!empty($row) && !empty($row[0])) {
-            $date = $row[0];
-            $ts = strtotime($date);
-            if ($ts && date('Y', $ts) == $current_year) {
-                $month = (int)date('n', $ts);
-                $activity_by_month[$month]++;
-            }
-        }
+try {
+    $monthly_activities = $db->fetchAll('
+        SELECT 
+            MONTH(activity_date) as month,
+            COUNT(*) as count
+        FROM research_capacity_activities 
+        WHERE YEAR(activity_date) = ? 
+        GROUP BY MONTH(activity_date)
+    ', [$current_year]);
+    
+    foreach ($monthly_activities as $activity) {
+        $activity_by_month[(int)$activity['month']] = (int)$activity['count'];
     }
-    fclose($file);
+} catch (Exception $e) {
+    // Handle error silently
 }
+
 $month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 $max_activities = max($activity_by_month) ?: 1;
 ?>
@@ -302,34 +353,27 @@ $max_activities = max($activity_by_month) ?: 1;
           </div>
           <div class="card-title">Publications</div>
           <div class="card-value"><?php echo $publications_count; ?></div>
-          
         </div>
-        
         <div class="dashboard-card">
           <div class="card-icon success">
             <i class="fa-solid fa-shield-halved"></i>
           </div>
           <div class="card-title">Ethics Protocols</div>
           <div class="card-value"><?php echo $ethics_count; ?></div>
-          
         </div>
-        
         <div class="dashboard-card">
           <div class="card-icon warning">
             <i class="fa-solid fa-chart-line"></i>
           </div>
           <div class="card-title">Research Activities</div>
           <div class="card-value"><?php echo $research_count; ?></div>
-         
         </div>
-        
         <div class="dashboard-card">
           <div class="card-icon info">
             <i class="fa-solid fa-bullseye"></i>
           </div>
           <div class="card-title">Average KPI Score</div>
           <div class="card-value"><?php echo $average_kpi; ?></div>
-          
         </div>
       </div>
 
@@ -385,8 +429,17 @@ $max_activities = max($activity_by_month) ?: 1;
                   $link = "php/Ethicss Reviewed Protocols.php?title=$title_param";
                 } elseif ($type === 'KPI') {
                   $link = "php/KPI records.php?title=$title_param";
+                } elseif ($type === 'Data Collection Tool') {
+                  $link = "php/Data Collection Tools.php?title=$title_param";
                 } else {
                   $link = '#';
+                }
+                
+                // Format upload date
+                $upload_date = '';
+                if (isset($update['upload_date'])) {
+                  $upload_timestamp = strtotime($update['upload_date']);
+                  $upload_date = date('M j, Y g:i A', $upload_timestamp);
                 }
               ?>
               <a href="<?php echo $link; ?>" class="update-item update-link" style="text-decoration:none;color:inherit;">
@@ -399,14 +452,21 @@ $max_activities = max($activity_by_month) ?: 1;
                     <i class="fa-solid fa-shield-halved"></i>
                   <?php elseif ($update['type'] === 'KPI'): ?>
                     <i class="fa-solid fa-bullseye"></i>
+                  <?php elseif ($update['type'] === 'Data Collection Tool'): ?>
+                    <i class="fa-solid fa-database"></i>
                   <?php endif; ?>
                 </div>
                 <div class="update-content">
                   <div class="update-title"><?php echo htmlspecialchars($update['title']); ?></div>
                   <div class="update-meta"><?php echo htmlspecialchars($update['meta']); ?></div>
-                  <?php if ($update['date']): ?>
-                    <div class="update-date"><?php echo htmlspecialchars($update['date']); ?></div>
-                  <?php endif; ?>
+                  <div class="update-dates">
+                    <?php if ($update['date']): ?>
+                      <div class="update-date">Date: <?php echo htmlspecialchars($update['date']); ?></div>
+                    <?php endif; ?>
+                    <?php if ($upload_date): ?>
+                      <div class="update-upload-date">Uploaded: <?php echo htmlspecialchars($upload_date); ?></div>
+                    <?php endif; ?>
+                  </div>
                 </div>
               </a>
               <?php endforeach; ?>
@@ -574,6 +634,18 @@ $max_activities = max($activity_by_month) ?: 1;
     .update-date {
       font-size: 0.75rem;
       color: var(--text-tertiary);
+    }
+    
+    .update-dates {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .update-upload-date {
+      font-size: 0.75rem;
+      color: var(--btn-primary-bg);
+      font-weight: 500;
     }
   </style>
 

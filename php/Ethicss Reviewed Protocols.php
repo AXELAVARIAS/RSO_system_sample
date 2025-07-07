@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Include database configuration
+require_once '../database/config.php';
+
 if (empty($_SESSION['logged_in'])) {
     header('Location: loginpage.php');
     exit;
@@ -9,111 +13,69 @@ if (isset($_POST['logout'])) {
     header('Location: loginpage.php');
     exit;
 }
-// File to store entries
-$data_file = __DIR__ . '/ethics_reviewed_protocols.csv';
+
+$success_message = '';
+$error_message = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle delete
-    if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $all_rows = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $all_rows[] = $row;
-            }
-            fclose($fp);
+    try {
+        $db = getDB();
+        
+        // Handle delete
+        if (isset($_POST['delete']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $db->query("DELETE FROM ethics_reviewed_protocols WHERE id = ?", [$id]);
+            $success_message = 'Protocol deleted successfully!';
         }
-        $index = (int)$_POST['index'] + 1; // +1 to skip header
-        if (isset($all_rows[$index])) {
-            array_splice($all_rows, $index, 1);
-            $fp = fopen($data_file, 'w');
-            foreach ($all_rows as $row) {
-                fputcsv($fp, $row);
+        // Handle edit save
+        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $no = $_POST['no'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $action = $_POST['action'] ?? '';
+            
+            if ($no && $title && $department && $status && $action) {
+                $db->query("UPDATE ethics_reviewed_protocols SET protocol_number = ?, title = ?, department = ?, status = ?, action_taken = ? WHERE id = ?", 
+                    [$no, $title, $department, $status, $action, $id]);
+                $success_message = 'Protocol updated successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Handle add
+        else {
+            $no = $_POST['no'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $action = $_POST['action'] ?? '';
+            
+            if ($no && $title && $department && $status && $action) {
+                $db->query("INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)", 
+                    [$no, $title, $department, $status, $action]);
+                $success_message = 'Protocol added successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
+            }
+        }
+    } catch (Exception $e) {
+        $error_message = 'Database error: ' . $e->getMessage();
     }
-    // Handle edit save
-    if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        $header = ['No', 'Title', 'Department', 'Status', 'Action'];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            $isFirstRow = true;
-            while ($row = fgetcsv($fp)) {
-                if ($isFirstRow) {
-                    $isFirstRow = false; // skip header
-                    continue;
-                }
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
-        $index = (int)$_POST['index'];
-        $no = $_POST['no'] ?? '';
-        $title = $_POST['title'] ?? '';
-        $department = $_POST['department'] ?? '';
-        $status = $_POST['status'] ?? '';
-        $action = $_POST['action'] ?? '';
-        if ($no && $title && $department && $status && $action) {
-            $entries[$index] = [$no, $title, $department, $status, $action];
-            $fp = fopen($data_file, 'w');
-            fputcsv($fp, $header);
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
-            }
-            fclose($fp);
-        }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-    // Handle add
-    $no = $_POST['no'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $action = $_POST['action'] ?? '';
-    if ($no && $title && $department && $status && $action) {
-        $entry = [$no, $title, $department, $status, $action];
-        $write_header = false;
-        if (!file_exists($data_file) || filesize($data_file) === 0) {
-            $write_header = true;
-        }
-        $fp = fopen($data_file, 'a');
-        if ($write_header) {
-            fputcsv($fp, ['No', 'Title', 'Department', 'Status', 'Action']);
-        }
-        fputcsv($fp, $entry);
-        fclose($fp);
-    }
+    
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Predefined entries
-$default_entries = [
-    ['EP-2025-001', 'Impact of AI on Student Privacy in Educational Platforms', 'Computer Science Department', 'Approved', 'Full Ethics Clearance Granted'],
-    ['EP-2025-002', 'Mental Health Survey Among University Students', 'Psychology Department', 'Under Review', 'Additional Documentation Requested'],
-    ['EP-2025-003', 'Environmental Impact Assessment of Campus Operations', 'Environmental Science Department', 'Approved', 'Conditional Approval with Monitoring'],
-    ['EP-2025-004', 'Social Media Usage Patterns Research', 'Sociology Department', 'Pending', 'Initial Review in Progress'],
-];
-
-// Read all entries
+// Read all entries from database
 $entries = [];
-if (file_exists($data_file)) {
-    $fp = fopen($data_file, 'r');
-    $isFirstRow = true;
-    while ($row = fgetcsv($fp)) {
-        if ($isFirstRow) {
-            $isFirstRow = false; // Skip the header row
-            continue;
-        }
-        $entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $entries = $db->fetchAll("SELECT * FROM ethics_reviewed_protocols ORDER BY protocol_number DESC");
+} catch (Exception $e) {
+    $error_message = 'Failed to load protocols: ' . $e->getMessage();
 }
 
 // Check if editing
@@ -172,11 +134,6 @@ if (isset($_GET['edit'])) {
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fas fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -212,6 +169,10 @@ if (isset($_GET['edit'])) {
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
+            <button class="profile-action theme-toggle" id="themeToggle">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -299,7 +260,7 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="" id="editForm">
             <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="index" id="editIndex">
+            <input type="hidden" name="id" id="editId">
             <div class="form-group">
               <label for="editNo">Protocol Number</label>
               <input type="text" id="editNo" name="no" required>
@@ -374,38 +335,38 @@ if (isset($_GET['edit'])) {
                 </tr>
               <?php else: ?>
                 <?php foreach ($entries as $i => $entry): ?>
-                <tr data-index="<?php echo $i; ?>">
+                <tr data-id="<?php echo $entry['id']; ?>">
                   <td class="protocol-no">
-                    <span class="protocol-number"><?php echo htmlspecialchars($entry[0]); ?></span>
+                    <span class="protocol-number"><?php echo htmlspecialchars($entry['protocol_number']); ?></span>
                   </td>
                   <td class="protocol-title">
                     <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry[1]); ?></h4>
+                      <h4><?php echo htmlspecialchars($entry['title']); ?></h4>
                     </div>
                   </td>
                   <td class="protocol-department">
-                    <span class="department-name"><?php echo htmlspecialchars($entry[2]); ?></span>
+                    <span class="department-name"><?php echo htmlspecialchars($entry['department']); ?></span>
                   </td>
                   <td class="protocol-status">
-                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[3])); ?>">
-                      <?php echo htmlspecialchars($entry[3]); ?>
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['status'])); ?>">
+                      <?php echo htmlspecialchars($entry['status']); ?>
                     </span>
                   </td>
                   <td class="protocol-action">
-                    <span class="action-text"><?php echo htmlspecialchars($entry[4]); ?></span>
+                    <span class="action-text"><?php echo htmlspecialchars($entry['action_taken']); ?></span>
                   </td>
                   <td class="protocol-actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-no="<?php echo htmlspecialchars($entry[0]); ?>"
-                              data-title="<?php echo htmlspecialchars($entry[1]); ?>"
-                              data-department="<?php echo htmlspecialchars($entry[2]); ?>"
-                              data-status="<?php echo htmlspecialchars($entry[3]); ?>"
-                              data-action="<?php echo htmlspecialchars($entry[4]); ?>">
+                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                              data-no="<?php echo htmlspecialchars($entry['protocol_number']); ?>"
+                              data-title="<?php echo htmlspecialchars($entry['title']); ?>"
+                              data-department="<?php echo htmlspecialchars($entry['department']); ?>"
+                              data-status="<?php echo htmlspecialchars($entry['status']); ?>"
+                              data-action="<?php echo htmlspecialchars($entry['action_taken']); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this protocol?');">
-                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
                         <button type="submit" name="delete" class="action-btn delete-btn">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -480,14 +441,14 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const index = btn.dataset.index;
+        const id = btn.dataset.id;
         const no = btn.dataset.no;
         const title = btn.dataset.title;
         const department = btn.dataset.department;
         const status = btn.dataset.status;
         const action = btn.dataset.action;
 
-        document.getElementById('editIndex').value = index;
+        document.getElementById('editId').value = id;
         document.getElementById('editNo').value = no;
         document.getElementById('editTitle').value = title;
         document.getElementById('editDepartment').value = department;
@@ -495,6 +456,35 @@ if (isset($_GET['edit'])) {
         document.getElementById('editAction').value = action;
 
         openModal(editModal);
+      }
+    });
+
+    // Dark mode toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const themeText = themeToggle.querySelector('span');
+    
+    // Check current theme
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+      themeIcon.className = 'fas fa-sun';
+      themeText.textContent = 'Light Mode';
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.body.classList.contains('dark-theme');
+      
+      if (isDark) {
+        document.body.classList.remove('dark-theme');
+        localStorage.setItem('theme', 'light');
+        themeIcon.className = 'fas fa-moon';
+        themeText.textContent = 'Dark Mode';
+      } else {
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+        themeIcon.className = 'fas fa-sun';
+        themeText.textContent = 'Light Mode';
       }
     });
 

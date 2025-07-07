@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Include database configuration
+require_once '../database/config.php';
+
 if (empty($_SESSION['logged_in'])) {
     header('Location: loginpage.php');
     exit;
@@ -9,97 +13,75 @@ if (isset($_POST['logout'])) {
     header('Location: loginpage.php');
     exit;
 }
-// File to store entries
-$data_file = __DIR__ . '/data_collection_tools.csv';
+
+$success_message = '';
+$error_message = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle delete
-    if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
+    try {
+        $db = getDB();
+        
+        // Handle delete
+        if (isset($_POST['delete']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $db->query("DELETE FROM data_collection_tools WHERE id = ?", [$id]);
+            $success_message = 'Entry deleted successfully!';
         }
-        $index = (int)$_POST['index'];
-        if (isset($entries[$index])) {
-            array_splice($entries, $index, 1);
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+        // Handle edit save
+        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $faculty = $_POST['faculty'] ?? '';
+            $degree = $_POST['degree'] ?? '';
+            $sex = $_POST['sex'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $ownership = $_POST['ownership'] ?? '';
+            $presented = $_POST['presented'] ?? '';
+            $published = $_POST['published'] ?? '';
+            $journal = $_POST['journal'] ?? '';
+            
+            if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
+                $db->query("UPDATE data_collection_tools SET researcher_name = ?, degree = ?, gender = ?, research_title = ?, role = ?, location = ?, submission_date = ?, research_area = ? WHERE id = ?", 
+                    [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal, $id]);
+                $success_message = 'Entry updated successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Handle add
+        else {
+            $faculty = $_POST['faculty'] ?? '';
+            $degree = $_POST['degree'] ?? '';
+            $sex = $_POST['sex'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $ownership = $_POST['ownership'] ?? '';
+            $presented = $_POST['presented'] ?? '';
+            $published = $_POST['published'] ?? '';
+            $journal = $_POST['journal'] ?? '';
+            
+            if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
+                $db->query("INSERT INTO data_collection_tools (researcher_name, degree, gender, research_title, role, location, submission_date, research_area) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                    [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal]);
+                $success_message = 'Entry added successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
+            }
+        }
+    } catch (Exception $e) {
+        $error_message = 'Database error: ' . $e->getMessage();
     }
-    // Handle edit save
-    if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
-        $index = (int)$_POST['index'];
-        $faculty = $_POST['faculty'] ?? '';
-        $degree = $_POST['degree'] ?? '';
-        $sex = $_POST['sex'] ?? '';
-        $title = $_POST['title'] ?? '';
-        $ownership = $_POST['ownership'] ?? '';
-        $presented = $_POST['presented'] ?? '';
-        $published = $_POST['published'] ?? '';
-        $journal = $_POST['journal'] ?? '';
-        if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
-            $entries[$index] = [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal];
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
-            }
-            fclose($fp);
-        }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-    // Handle add
-    $faculty = $_POST['faculty'] ?? '';
-    $degree = $_POST['degree'] ?? '';
-    $sex = $_POST['sex'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $ownership = $_POST['ownership'] ?? '';
-    $presented = $_POST['presented'] ?? '';
-    $published = $_POST['published'] ?? '';
-    $journal = $_POST['journal'] ?? '';
-    if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
-        $entry = [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal];
-        $fp = fopen($data_file, 'a');
-        fputcsv($fp, $entry);
-        fclose($fp);
-    }
+    
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Predefined entries
-$default_entries = [
-    ['Dr. Sarah Johnson', 'Ph.D.', 'Female', 'Machine Learning Applications in Healthcare', 'Author', '05,15,25 - International AI Conference', '2025-04-20', 'Journal of Medical Informatics'],
-    ['Prof. Michael Chen', 'Ph.D.', 'Male', 'Sustainable Energy Systems in Urban Planning', 'Co-Author', '04,22,25 - Green Cities Summit', '2025-03-15', 'Environmental Engineering Review'],
-    ['Dr. Emily Rodriguez', 'Ph.D.', 'Female', 'Educational Technology Impact on Student Learning', 'Author', '03,10,25 - EdTech Innovation Forum', '2025-02-28', 'Educational Technology Research'],
-];
-
-// Read all entries
+// Read all entries from database
 $entries = [];
-if (file_exists($data_file)) {
-    $fp = fopen($data_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $entries = $db->fetchAll("SELECT * FROM data_collection_tools ORDER BY submission_date DESC");
+} catch (Exception $e) {
+    $error_message = 'Failed to load entries: ' . $e->getMessage();
 }
 
 // Check if editing
@@ -158,11 +140,6 @@ if (isset($_GET['edit'])) {
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fas fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -198,6 +175,10 @@ if (isset($_GET['edit'])) {
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
+            <button class="profile-action theme-toggle" id="themeToggle" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -230,6 +211,21 @@ if (isset($_GET['edit'])) {
           </button>
         </div>
       </div>
+
+      <!-- Messages -->
+      <?php if ($success_message): ?>
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i>
+          <?php echo htmlspecialchars($success_message); ?>
+        </div>
+      <?php endif; ?>
+      
+      <?php if ($error_message): ?>
+        <div class="alert alert-error">
+          <i class="fas fa-exclamation-circle"></i>
+          <?php echo htmlspecialchars($error_message); ?>
+        </div>
+      <?php endif; ?>
 
       <!-- Add Entry Modal -->
       <div class="modal" id="addModal">
@@ -308,7 +304,7 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="" id="editForm">
             <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="index" id="editIndex">
+            <input type="hidden" name="id" id="editId">
             <div class="form-group">
               <label for="editFaculty">Faculty Name</label>
               <input type="text" id="editFaculty" name="faculty" required>
@@ -406,51 +402,51 @@ if (isset($_GET['edit'])) {
                   </td>
                 </tr>
               <?php else: ?>
-                <?php foreach ($entries as $i => $entry): ?>
-                <tr data-index="<?php echo $i; ?>">
+                <?php foreach ($entries as $entry): ?>
+                <tr data-id="<?php echo $entry['id']; ?>">
                   <td data-label="Faculty Name">
                     <div class="faculty-info">
-                      <strong><?php echo htmlspecialchars($entry[0]); ?></strong>
+                      <strong><?php echo htmlspecialchars($entry['researcher_name']); ?></strong>
                     </div>
                   </td>
                   <td data-label="Degree">
-                    <?php echo htmlspecialchars($entry[1]); ?>
+                    <?php echo htmlspecialchars($entry['degree']); ?>
                   </td>
                   <td data-label="Sex">
-                    <?php echo htmlspecialchars($entry[2]); ?>
+                    <?php echo htmlspecialchars($entry['gender']); ?>
                   </td>
                   <td data-label="Research Title">
                     <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry[3]); ?></h4>
+                      <h4><?php echo htmlspecialchars($entry['research_title']); ?></h4>
                     </div>
                   </td>
                   <td data-label="Ownership">
-                    <?php echo htmlspecialchars($entry[4]); ?>
+                    <?php echo htmlspecialchars($entry['role']); ?>
                   </td>
                   <td data-label="Presented At">
-                    <span class="presentation-info"><?php echo htmlspecialchars($entry[5]); ?></span>
+                    <span class="presentation-info"><?php echo htmlspecialchars($entry['location']); ?></span>
                   </td>
                   <td data-label="Published Date">
-                    <span class="date-info"><?php echo htmlspecialchars($entry[6]); ?></span>
+                    <span class="date-info"><?php echo htmlspecialchars($entry['submission_date']); ?></span>
                   </td>
                   <td data-label="Journal/Publication">
-                    <span class="journal-info"><?php echo htmlspecialchars($entry[7]); ?></span>
+                    <span class="journal-info"><?php echo htmlspecialchars($entry['research_area']); ?></span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-faculty="<?php echo htmlspecialchars($entry[0]); ?>"
-                              data-degree="<?php echo htmlspecialchars($entry[1]); ?>"
-                              data-sex="<?php echo htmlspecialchars($entry[2]); ?>"
-                              data-title="<?php echo htmlspecialchars($entry[3]); ?>"
-                              data-ownership="<?php echo htmlspecialchars($entry[4]); ?>"
-                              data-presented="<?php echo htmlspecialchars($entry[5]); ?>"
-                              data-published="<?php echo htmlspecialchars($entry[6]); ?>"
-                              data-journal="<?php echo htmlspecialchars($entry[7]); ?>">
+                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                              data-faculty="<?php echo htmlspecialchars($entry['researcher_name']); ?>"
+                              data-degree="<?php echo htmlspecialchars($entry['degree']); ?>"
+                              data-sex="<?php echo htmlspecialchars($entry['gender']); ?>"
+                              data-title="<?php echo htmlspecialchars($entry['research_title']); ?>"
+                              data-ownership="<?php echo htmlspecialchars($entry['role']); ?>"
+                              data-presented="<?php echo htmlspecialchars($entry['location']); ?>"
+                              data-published="<?php echo htmlspecialchars($entry['submission_date']); ?>"
+                              data-journal="<?php echo htmlspecialchars($entry['research_area']); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
-                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
                         <button type="submit" name="delete" class="action-btn delete-btn">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -506,6 +502,47 @@ if (isset($_GET['edit'])) {
       }
     });
 
+    // Theme toggle within profile dropdown
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.themeManager) {
+          window.themeManager.toggleTheme();
+          // Update the button text based on current theme
+          const currentTheme = window.themeManager.getCurrentTheme();
+          const icon = themeToggle.querySelector('i');
+          const text = themeToggle.querySelector('span');
+          
+          if (currentTheme === 'dark') {
+            icon.className = 'fas fa-sun';
+            text.textContent = 'Light Mode';
+          } else {
+            icon.className = 'fas fa-moon';
+            text.textContent = 'Dark Mode';
+          }
+        }
+      });
+    }
+
+    // Initialize theme toggle button state
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.themeManager && themeToggle) {
+        const currentTheme = window.themeManager.getCurrentTheme();
+        const icon = themeToggle.querySelector('i');
+        const text = themeToggle.querySelector('span');
+        
+        if (currentTheme === 'dark') {
+          icon.className = 'fas fa-sun';
+          text.textContent = 'Light Mode';
+        } else {
+          icon.className = 'fas fa-moon';
+          text.textContent = 'Dark Mode';
+        }
+      }
+    });
+
     // Modal functionality
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
@@ -546,7 +583,7 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const index = btn.dataset.index;
+        const id = btn.dataset.id;
         const faculty = btn.dataset.faculty;
         const degree = btn.dataset.degree;
         const sex = btn.dataset.sex;
@@ -556,7 +593,7 @@ if (isset($_GET['edit'])) {
         const published = btn.dataset.published;
         const journal = btn.dataset.journal;
 
-        document.getElementById('editIndex').value = index;
+        document.getElementById('editId').value = id;
         document.getElementById('editFaculty').value = faculty;
         document.getElementById('editDegree').value = degree;
         document.getElementById('editSex').value = sex;

@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Include database configuration
+require_once '../database/config.php';
+
 if (empty($_SESSION['logged_in'])) {
     header('Location: loginpage.php');
     exit;
@@ -9,100 +13,73 @@ if (isset($_POST['logout'])) {
     header('Location: loginpage.php');
     exit;
 }
-// File to store entries
-$data_file = __DIR__ . '/publication_presentation.csv';
+
+$success_message = '';
+$error_message = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Handle delete
-    if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
+    try {
+        $db = getDB();
+        
+        // Handle delete
+        if (isset($_POST['delete']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $db->query("DELETE FROM publication_presentations WHERE id = ?", [$id]);
+            $success_message = 'Publication deleted successfully!';
         }
-        $index = (int)$_POST['index'];
-        if (isset($entries[$index])) {
-            array_splice($entries, $index, 1);
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+        // Handle edit save
+        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $date = $_POST['date'] ?? '';
+            $author = $_POST['author'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $subsidy = $_POST['subsidy'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $local_international = $_POST['local_international'] ?? '';
+            
+            if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
+                $db->query("UPDATE publication_presentations SET application_date = ?, author_name = ?, paper_title = ?, department = ?, research_subsidy = ?, status = ?, scope = ? WHERE id = ?", 
+                    [$date, $author, $title, $department, $subsidy, $status, $local_international, $id]);
+                $success_message = 'Publication updated successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Handle add
+        else {
+            $date = $_POST['date'] ?? '';
+            $author = $_POST['author'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $subsidy = $_POST['subsidy'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $local_international = $_POST['local_international'] ?? '';
+            
+            if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
+                $db->query("INSERT INTO publication_presentations (application_date, author_name, paper_title, department, research_subsidy, status, scope) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                    [$date, $author, $title, $department, $subsidy, $status, $local_international]);
+                $success_message = 'Publication added successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
+            }
+        }
+    } catch (Exception $e) {
+        $error_message = 'Database error: ' . $e->getMessage();
     }
-    // Handle edit save
-    if (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $entries = [];
-        if (file_exists($data_file)) {
-            $fp = fopen($data_file, 'r');
-            while ($row = fgetcsv($fp)) {
-                $entries[] = $row;
-            }
-            fclose($fp);
-        }
-        $index = (int)$_POST['index'];
-        $date = $_POST['date'] ?? '';
-        $author = $_POST['author'] ?? '';
-        $title = $_POST['title'] ?? '';
-        $department = $_POST['department'] ?? '';
-        $subsidy = $_POST['subsidy'] ?? '';
-        $status = $_POST['status'] ?? '';
-        $local_international = $_POST['local_international'] ?? '';
-        if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
-            $entries[$index] = [$date, $author, $title, $department, $subsidy, $status, $local_international];
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
-            }
-            fclose($fp);
-        }
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-    // Handle add
-    $date = $_POST['date'] ?? '';
-    $author = $_POST['author'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $subsidy = $_POST['subsidy'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $local_international = $_POST['local_international'] ?? '';
-    if ($date && $author && $title && $department && $subsidy && $status && $local_international) {
-        $entry = [$date, $author, $title, $department, $subsidy, $status, $local_international];
-        $fp = fopen($data_file, 'a');
-        fputcsv($fp, $entry);
-        fclose($fp);
-    }
+    
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Predefined entries
-$default_entries = [
-    ['2025-01-15', 'Dr. Sarah Johnson', 'AI in Healthcare', 'Health Sciences', 'Yes', 'Published', 'International'],
-    ['2025-02-20', 'Prof. Michael Chen', 'Urban Energy Systems', 'Engineering', 'No', 'Under Review', 'Local'],
-    ['2025-03-10', 'Dr. Emily Rodriguez', 'EdTech Impact', 'Education', 'Yes', 'Accepted', 'International'],
-];
-
-// Read all entries
+// Read all entries from database
 $entries = [];
-if (file_exists($data_file)) {
-    $fp = fopen($data_file, 'r');
-    $is_first_row = true;
-    while ($row = fgetcsv($fp)) {
-        if ($is_first_row) {
-            $is_first_row = false;
-            continue; // Skip header row
-        }
-        $entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $entries = $db->fetchAll("SELECT * FROM publication_presentations ORDER BY application_date DESC");
+} catch (Exception $e) {
+    $error_message = 'Failed to load publications: ' . $e->getMessage();
 }
 
 // Check if editing
@@ -161,11 +138,6 @@ if (isset($_GET['edit'])) {
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fas fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -201,6 +173,10 @@ if (isset($_GET['edit'])) {
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
+            <button class="profile-action theme-toggle" id="themeToggle" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -266,11 +242,23 @@ if (isset($_GET['edit'])) {
             </div>
             <div class="form-group">
               <label for="status">Status</label>
-              <input type="text" id="status" name="status" required placeholder="Enter status">
+              <select id="status" name="status" required>
+                <option value="">Select status</option>
+                <option value="Draft">Draft</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Published">Published</option>
+                <option value="Rejected">Rejected</option>
+              </select>
             </div>
             <div class="form-group">
               <label for="local_international">Local/International</label>
-              <input type="text" id="local_international" name="local_international" required placeholder="Enter Local or International">
+              <select id="local_international" name="local_international" required>
+                <option value="">Select scope</option>
+                <option value="Local">Local</option>
+                <option value="International">International</option>
+              </select>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
@@ -291,7 +279,7 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="" id="editForm">
             <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="index" id="editIndex">
+            <input type="hidden" name="id" id="editId">
             <div class="form-group">
               <label for="editDate">Date OF Application</label>
               <input type="date" id="editDate" name="date" required>
@@ -314,11 +302,21 @@ if (isset($_GET['edit'])) {
             </div>
             <div class="form-group">
               <label for="editStatus">Status</label>
-              <input type="text" id="editStatus" name="status" required>
+              <select id="editStatus" name="status" required>
+                <option value="Draft">Draft</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Published">Published</option>
+                <option value="Rejected">Rejected</option>
+              </select>
             </div>
             <div class="form-group">
               <label for="editLocalInternational">Local/International</label>
-              <input type="text" id="editLocalInternational" name="local_international" required>
+              <select id="editLocalInternational" name="local_international" required>
+                <option value="Local">Local</option>
+                <option value="International">International</option>
+              </select>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
@@ -372,46 +370,46 @@ if (isset($_GET['edit'])) {
                 </tr>
               <?php else: ?>
                 <?php foreach ($entries as $i => $entry): ?>
-                <tr data-index="<?php echo $i; ?>">
+                <tr data-id="<?php echo $entry['id']; ?>">
                   <td data-label="Date OF Application">
-                    <span class="date-info"><?php echo htmlspecialchars($entry[0] ?? ''); ?></span>
+                    <span class="date-info"><?php echo htmlspecialchars($entry['application_date']); ?></span>
                   </td>
                   <td data-label="Name(s) of faculty/research worker">
                     <div class="author-info">
-                      <strong><?php echo htmlspecialchars($entry[1] ?? ''); ?></strong>
+                      <strong><?php echo htmlspecialchars($entry['author_name']); ?></strong>
                     </div>
                   </td>
                   <td data-label="Title of Paper">
                     <div class="title-content">
-                      <h4><?php echo htmlspecialchars($entry[2] ?? ''); ?></h4>
+                      <h4><?php echo htmlspecialchars($entry['paper_title']); ?></h4>
                     </div>
                   </td>
                   <td data-label="Department">
-                    <span class="journal-info"><?php echo htmlspecialchars($entry[3] ?? ''); ?></span>
+                    <span class="journal-info"><?php echo htmlspecialchars($entry['department']); ?></span>
                   </td>
                   <td data-label="Research Subsidy">
-                    <span class="impact-factor"><?php echo htmlspecialchars($entry[4] ?? ''); ?></span>
+                    <span class="impact-factor"><?php echo htmlspecialchars($entry['research_subsidy']); ?></span>
                   </td>
                   <td data-label="Status">
-                    <span class="citations-count"><?php echo htmlspecialchars($entry[5] ?? ''); ?></span>
+                    <span class="citations-count"><?php echo htmlspecialchars($entry['status']); ?></span>
                   </td>
                   <td data-label="Local/International">
-                    <span class="citations-count"><?php echo htmlspecialchars($entry[6] ?? ''); ?></span>
+                    <span class="citations-count"><?php echo htmlspecialchars($entry['scope']); ?></span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-date="<?php echo htmlspecialchars($entry[0] ?? ''); ?>"
-                              data-author="<?php echo htmlspecialchars($entry[1] ?? ''); ?>"
-                              data-title="<?php echo htmlspecialchars($entry[2] ?? ''); ?>"
-                              data-department="<?php echo htmlspecialchars($entry[3] ?? ''); ?>"
-                              data-subsidy="<?php echo htmlspecialchars($entry[4] ?? ''); ?>"
-                              data-status="<?php echo htmlspecialchars($entry[5] ?? ''); ?>"
-                              data-local-international="<?php echo htmlspecialchars($entry[6] ?? ''); ?>">
+                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                              data-date="<?php echo htmlspecialchars($entry['application_date']); ?>"
+                              data-author="<?php echo htmlspecialchars($entry['author_name']); ?>"
+                              data-title="<?php echo htmlspecialchars($entry['paper_title']); ?>"
+                              data-department="<?php echo htmlspecialchars($entry['department']); ?>"
+                              data-subsidy="<?php echo htmlspecialchars($entry['research_subsidy']); ?>"
+                              data-status="<?php echo htmlspecialchars($entry['status']); ?>"
+                              data-local-international="<?php echo htmlspecialchars($entry['scope']); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
-                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
                         <button type="submit" name="delete" class="action-btn delete-btn">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -491,6 +489,47 @@ if (isset($_GET['edit'])) {
       }
     });
 
+    // Theme toggle within profile dropdown
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.themeManager) {
+          window.themeManager.toggleTheme();
+          // Update the button text based on current theme
+          const currentTheme = window.themeManager.getCurrentTheme();
+          const icon = themeToggle.querySelector('i');
+          const text = themeToggle.querySelector('span');
+          
+          if (currentTheme === 'dark') {
+            icon.className = 'fas fa-sun';
+            text.textContent = 'Light Mode';
+          } else {
+            icon.className = 'fas fa-moon';
+            text.textContent = 'Dark Mode';
+          }
+        }
+      });
+    }
+
+    // Initialize theme toggle button state
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.themeManager && themeToggle) {
+        const currentTheme = window.themeManager.getCurrentTheme();
+        const icon = themeToggle.querySelector('i');
+        const text = themeToggle.querySelector('span');
+        
+        if (currentTheme === 'dark') {
+          icon.className = 'fas fa-sun';
+          text.textContent = 'Light Mode';
+        } else {
+          icon.className = 'fas fa-moon';
+          text.textContent = 'Dark Mode';
+        }
+      }
+    });
+
     // Modal functionality
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
@@ -531,7 +570,7 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const index = btn.dataset.index;
+        const id = btn.dataset.id;
         const date = btn.dataset.date;
         const author = btn.dataset.author;
         const title = btn.dataset.title;
@@ -540,7 +579,7 @@ if (isset($_GET['edit'])) {
         const status = btn.dataset.status;
         const localInternational = btn.dataset.localInternational || btn.dataset['local-international'];
 
-        document.getElementById('editIndex').value = index;
+        document.getElementById('editId').value = id;
         document.getElementById('editDate').value = date;
         document.getElementById('editAuthor').value = author;
         document.getElementById('editTitle').value = title;

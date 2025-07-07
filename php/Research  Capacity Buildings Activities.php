@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+// Include database configuration
+require_once '../database/config.php';
+
 if (empty($_SESSION['logged_in'])) {
     header('Location: loginpage.php');
     exit;
@@ -10,85 +14,79 @@ if (isset($_POST['logout'])) {
     exit;
 }
 
-// File to store entries
-$data_file = __DIR__ . '/research_capacity_data.csv';
+$success_message = '';
+$error_message = '';
+
+// Handle GET messages from upload
+if (isset($_GET['success'])) {
+    $success_message = $_GET['success'];
+}
+if (isset($_GET['error'])) {
+    $error_message = $_GET['error'];
+}
 
 // Handle form submission (add, edit, delete)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Read all entries
-    $entries = [];
-    if (file_exists($data_file)) {
-        $fp = fopen($data_file, 'r');
-        while ($row = fgetcsv($fp)) {
-            $entries[] = $row;
+    try {
+        $db = getDB();
+        
+        // Delete entry
+        if (isset($_POST['delete']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $db->query("DELETE FROM research_capacity_activities WHERE id = ?", [$id]);
+            $success_message = 'Activity deleted successfully!';
         }
-        fclose($fp);
-    }
-
-    // Delete entry
-    if (isset($_POST['delete']) && isset($_POST['index'])) {
-        $index = (int)$_POST['index'];
-        if (isset($entries[$index])) {
-            array_splice($entries, $index, 1);
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+        // Save edited entry
+        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
+            $id = (int)$_POST['id'];
+            $date = $_POST['date'] ?? '';
+            $name = $_POST['name'] ?? '';
+            $venue = $_POST['venue'] ?? '';
+            $facilitators = $_POST['facilitators'] ?? '';
+            $num_participants = (int)($_POST['num_participants'] ?? 0);
+            $status = $_POST['status'] ?? '';
+            
+            if ($date && $name && $venue && $facilitators && $status) {
+                $db->query("UPDATE research_capacity_activities SET activity_date = ?, activity_title = ?, venue = ?, organizer = ?, participants_count = ?, status = ? WHERE id = ?", 
+                    [$date, $name, $venue, $facilitators, $num_participants, $status, $id]);
+                $success_message = 'Activity updated successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
-    }
-    // Edit entry
-    elseif (isset($_POST['edit']) && isset($_POST['index'])) {
-        // Handled below (show edit form)
-    }
-    // Save edited entry
-    elseif (isset($_POST['save_edit']) && isset($_POST['index'])) {
-        $index = (int)$_POST['index'];
-        $date = $_POST['date'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $venue = $_POST['venue'] ?? '';
-        $facilitators = $_POST['facilitators'] ?? '';
-        $num_participants = $_POST['num_participants'] ?? '';
-        $status = $_POST['status'] ?? '';
-        if ($date && $name && $venue && $facilitators && $num_participants && $status) {
-            $entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
+        // Add new entry
+        elseif (isset($_POST['add_entry'])) {
+            $date = $_POST['date'] ?? '';
+            $name = $_POST['name'] ?? '';
+            $venue = $_POST['venue'] ?? '';
+            $facilitators = $_POST['facilitators'] ?? '';
+            $num_participants = (int)($_POST['num_participants'] ?? 0);
+            $status = $_POST['status'] ?? '';
+            
+            if ($date && $name && $venue && $facilitators && $status) {
+                $db->query("INSERT INTO research_capacity_activities (activity_date, activity_title, venue, organizer, participants_count, status) VALUES (?, ?, ?, ?, ?, ?)", 
+                    [$date, $name, $venue, $facilitators, $num_participants, $status]);
+                $success_message = 'Activity added successfully!';
+            } else {
+                $error_message = 'Please fill in all required fields.';
             }
-            fclose($fp);
         }
+    } catch (Exception $e) {
+        $error_message = 'Database error: ' . $e->getMessage();
     }
-    // Add new entry
-    elseif (isset($_POST['add_entry'])) {
-        $date = $_POST['date'] ?? '';
-        $name = $_POST['name'] ?? '';
-        $venue = $_POST['venue'] ?? '';
-        $facilitators = $_POST['facilitators'] ?? '';
-        $num_participants = $_POST['num_participants'] ?? '';
-        $status = $_POST['status'] ?? '';
-        if ($date && $name && $venue && $facilitators && $num_participants && $status) {
-            $entries[] = [$date, $name, $venue, $facilitators, $num_participants, $status];
-            $fp = fopen($data_file, 'w');
-            foreach ($entries as $entry) {
-                fputcsv($fp, $entry);
-            }
-            fclose($fp);
-        }
-    }
+    
     // Redirect to avoid resubmission
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit;
 }
 
-// Read all entries
+// Read all entries from database
 $entries = [];
-if (file_exists($data_file)) {
-    $fp = fopen($data_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $entries = $db->fetchAll("SELECT * FROM research_capacity_activities ORDER BY activity_date DESC");
+} catch (Exception $e) {
+    $error_message = 'Failed to load activities: ' . $e->getMessage();
 }
 
 // Check if editing
@@ -147,11 +145,6 @@ if (isset($_GET['edit'])) {
         </a>
       </nav>
       
-      <!-- Theme Toggle -->
-      <button class="theme-toggle" title="Toggle Theme">
-        <i class="fas fa-moon"></i>
-      </button>
-      
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
         <button class="profile-btn" id="profileBtn">
@@ -187,6 +180,10 @@ if (isset($_GET['edit'])) {
               <i class="fas fa-user-edit"></i>
               Edit Profile
             </a>
+            <button class="profile-action theme-toggle" id="themeToggle" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
             <form method="post" class="logout-form">
               <button type="submit" name="logout" class="profile-action logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -209,7 +206,7 @@ if (isset($_GET['edit'])) {
           <p>Track and manage research capacity building initiatives and training programs</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="uploadBtn">
+          <button class="btn btn-secondary" id="uploadBtn" disabled>
             <i class="fas fa-upload"></i>
             Upload Excel
           </button>
@@ -219,6 +216,21 @@ if (isset($_GET['edit'])) {
           </button>
         </div>
       </div>
+
+      <!-- Messages -->
+      <?php if ($success_message): ?>
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i>
+          <?php echo htmlspecialchars($success_message); ?>
+        </div>
+      <?php endif; ?>
+      
+      <?php if ($error_message): ?>
+        <div class="alert alert-error">
+          <i class="fas fa-exclamation-circle"></i>
+          <?php echo htmlspecialchars($error_message); ?>
+        </div>
+      <?php endif; ?>
 
       <!-- Add Entry Modal -->
       <div class="modal" id="addModal">
@@ -280,7 +292,7 @@ if (isset($_GET['edit'])) {
           </div>
           <form class="modal-form" method="post" action="" id="editForm">
             <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="index" id="editIndex">
+            <input type="hidden" name="id" id="editId">
             <div class="form-group">
               <label for="editDate">Date</label>
               <input type="date" id="editDate" name="date" required>
@@ -317,6 +329,8 @@ if (isset($_GET['edit'])) {
           </form>
         </div>
       </div>
+
+
 
       <!-- Data Table -->
       <div class="data-card">
@@ -360,43 +374,43 @@ if (isset($_GET['edit'])) {
                   </td>
                 </tr>
               <?php else: ?>
-                <?php foreach ($entries as $i => $entry): ?>
-                <tr data-index="<?php echo $i; ?>">
+                <?php foreach ($entries as $entry): ?>
+                <tr data-id="<?php echo $entry['id']; ?>">
                   <td data-label="Date">
-                    <span class="date-info"><?php echo htmlspecialchars($entry[0]); ?></span>
+                    <span class="date-info"><?php echo htmlspecialchars($entry['activity_date']); ?></span>
                   </td>
                   <td data-label="Activity Name">
                     <div class="activity-title">
-                      <h4><?php echo htmlspecialchars($entry[1]); ?></h4>
+                      <h4><?php echo htmlspecialchars($entry['activity_title']); ?></h4>
                     </div>
                   </td>
                   <td data-label="Venue">
-                    <span class="venue-info"><?php echo htmlspecialchars($entry[2]); ?></span>
+                    <span class="venue-info"><?php echo htmlspecialchars($entry['venue']); ?></span>
                   </td>
                   <td data-label="Facilitators">
-                    <span class="facilitators-info"><?php echo htmlspecialchars($entry[3]); ?></span>
+                    <span class="facilitators-info"><?php echo htmlspecialchars($entry['organizer']); ?></span>
                   </td>
                   <td data-label="Participants">
-                    <span class="participants-count"><?php echo htmlspecialchars($entry[4]); ?></span>
+                    <span class="participants-count"><?php echo htmlspecialchars($entry['participants_count']); ?></span>
                   </td>
                   <td data-label="Status">
-                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry[5])); ?>">
-                      <?php echo htmlspecialchars($entry[5]); ?>
+                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['status'])); ?>">
+                      <?php echo htmlspecialchars($entry['status']); ?>
                     </span>
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-index="<?php echo $i; ?>" 
-                              data-date="<?php echo htmlspecialchars($entry[0]); ?>"
-                              data-name="<?php echo htmlspecialchars($entry[1]); ?>"
-                              data-venue="<?php echo htmlspecialchars($entry[2]); ?>"
-                              data-facilitators="<?php echo htmlspecialchars($entry[3]); ?>"
-                              data-participants="<?php echo htmlspecialchars($entry[4]); ?>"
-                              data-status="<?php echo htmlspecialchars($entry[5]); ?>">
+                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                              data-date="<?php echo htmlspecialchars($entry['activity_date']); ?>"
+                              data-name="<?php echo htmlspecialchars($entry['activity_title']); ?>"
+                              data-venue="<?php echo htmlspecialchars($entry['venue']); ?>"
+                              data-facilitators="<?php echo htmlspecialchars($entry['organizer']); ?>"
+                              data-participants="<?php echo htmlspecialchars($entry['participants_count']); ?>"
+                              data-status="<?php echo htmlspecialchars($entry['status']); ?>">
                         <i class="fas fa-edit"></i>
                       </button>
                       <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this activity?');">
-                        <input type="hidden" name="index" value="<?php echo $i; ?>">
+                        <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
                         <button type="submit" name="delete" class="action-btn delete-btn">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -442,6 +456,10 @@ if (isset($_GET['edit'])) {
       font-size: inherit;
       font-weight: inherit;
     }
+
+
+
+
   </style>
 
   <script src="../js/theme.js"></script>
@@ -459,6 +477,47 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (!profileMenu.contains(e.target)) {
         profileMenu.classList.remove('open');
+      }
+    });
+
+    // Theme toggle within profile dropdown
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.themeManager) {
+          window.themeManager.toggleTheme();
+          // Update the button text based on current theme
+          const currentTheme = window.themeManager.getCurrentTheme();
+          const icon = themeToggle.querySelector('i');
+          const text = themeToggle.querySelector('span');
+          
+          if (currentTheme === 'dark') {
+            icon.className = 'fas fa-sun';
+            text.textContent = 'Light Mode';
+          } else {
+            icon.className = 'fas fa-moon';
+            text.textContent = 'Dark Mode';
+          }
+        }
+      });
+    }
+
+    // Initialize theme toggle button state
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.themeManager && themeToggle) {
+        const currentTheme = window.themeManager.getCurrentTheme();
+        const icon = themeToggle.querySelector('i');
+        const text = themeToggle.querySelector('span');
+        
+        if (currentTheme === 'dark') {
+          icon.className = 'fas fa-sun';
+          text.textContent = 'Light Mode';
+        } else {
+          icon.className = 'fas fa-moon';
+          text.textContent = 'Dark Mode';
+        }
       }
     });
 
@@ -502,7 +561,7 @@ if (isset($_GET['edit'])) {
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const index = btn.dataset.index;
+        const id = btn.dataset.id;
         const date = btn.dataset.date;
         const name = btn.dataset.name;
         const venue = btn.dataset.venue;
@@ -510,7 +569,7 @@ if (isset($_GET['edit'])) {
         const participants = btn.dataset.participants;
         const status = btn.dataset.status;
 
-        document.getElementById('editIndex').value = index;
+        document.getElementById('editId').value = id;
         document.getElementById('editDate').value = date;
         document.getElementById('editName').value = name;
         document.getElementById('editVenue').value = venue;
@@ -541,10 +600,9 @@ if (isset($_GET['edit'])) {
       });
     });
 
-    // Upload button (placeholder)
-    document.getElementById('uploadBtn').addEventListener('click', () => {
-      alert('Upload functionality will be implemented here');
-    });
+
+
+
   </script>
 </body>
 </html>

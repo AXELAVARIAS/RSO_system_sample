@@ -1,6 +1,9 @@
 <?php
 session_start();
-// Simple login and registration handler (demo only)
+
+// Include database configuration
+require_once '../database/config.php';
+
 $login_error = '';
 $register_error = '';
 $register_success = '';
@@ -22,32 +25,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($reg_userType === 'admin') {
             $register_error = 'Admin account cannot be registered.';
         } elseif ($reg_email && $reg_password && $reg_userType && $reg_fullName && $reg_department) {
-            $users_file = 'users.csv';
-            $user_exists = false;
-            if (file_exists($users_file)) {
-                $file = fopen($users_file, 'r');
-                while (($data = fgetcsv($file)) !== false) {
-                    if ($data[0] === $reg_email) {
-                        $user_exists = true;
-                        break;
-                    }
+            try {
+                $db = getDB();
+                
+                // Check if user already exists
+                $existing_user = $db->fetch("SELECT id FROM users WHERE email = ?", [$reg_email]);
+                
+                if ($existing_user) {
+                    $register_error = 'User already exists.';
+                } else {
+                    // Insert new user
+                    $db->query("INSERT INTO users (email, password_hash, user_type, full_name, department) VALUES (?, ?, ?, ?, ?)", 
+                        [$reg_email, password_hash($reg_password, PASSWORD_DEFAULT), $reg_userType, $reg_fullName, $reg_department]);
+                    
+                    // Auto-login after registration
+                    $_SESSION['logged_in'] = true;
+                    $_SESSION['user_email'] = $reg_email;
+                    $_SESSION['user_type'] = $reg_userType;
+                    $_SESSION['user_full_name'] = $reg_fullName;
+                    $_SESSION['user_department'] = $reg_department;
+                    $_SESSION['profile_picture'] = '../pics/rso-bg.png';
+                    
+                    header('Location: ../index.php');
+                    exit;
                 }
-                fclose($file);
-            }
-            if ($user_exists) {
-                $register_error = 'User already exists.';
-            } else {
-                $file = fopen($users_file, 'a');
-                fputcsv($file, [$reg_email, password_hash($reg_password, PASSWORD_DEFAULT), $reg_userType, $reg_fullName, $reg_department]);
-                fclose($file);
-                // Auto-login after registration
-                $_SESSION['logged_in'] = true;
-                $_SESSION['user_email'] = $reg_email;
-                $_SESSION['user_type'] = $reg_userType;
-                $_SESSION['user_full_name'] = $reg_fullName;
-                $_SESSION['user_department'] = $reg_department;
-                header('Location: ../index.php');
-                exit;
+            } catch (Exception $e) {
+                $register_error = 'Registration failed. Please try again.';
             }
         } else {
             $register_error = 'Please fill in all fields.';
@@ -56,55 +59,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Login logic
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
-        $users_file = 'users.csv';
         $login_valid = false;
         $is_admin = false;
-        $user_full_name = '';
-        $user_department = '';
-        $user_type = '';
+        $user_data = null;
         
         // Admin login: check first
         if ($email === $admin_email && $password === $admin_password) {
             $login_valid = true;
             $is_admin = true;
-        } elseif ($email && $password && file_exists($users_file)) {
-            $file = fopen($users_file, 'r');
-            while (($data = fgetcsv($file)) !== false) {
-                if ($data[0] === $email && password_verify($password, $data[1])) {
+        } elseif ($email && $password) {
+            try {
+                $db = getDB();
+                
+                // Get user from database
+                $user_data = $db->fetch("SELECT * FROM users WHERE email = ?", [$email]);
+                
+                if ($user_data && password_verify($password, $user_data['password_hash'])) {
                     $login_valid = true;
-                    $user_type = $data[2] ?? '';
-                    $user_full_name = $data[3] ?? '';
-                    $user_department = $data[4] ?? '';
-                    break;
                 }
+            } catch (Exception $e) {
+                $login_error = 'Database connection error.';
             }
-            fclose($file);
         }
+        
         if ($login_valid) {
             $_SESSION['logged_in'] = true;
             $_SESSION['user_email'] = $email;
-            $_SESSION['user_type'] = $is_admin ? 'admin' : $user_type;
-            $_SESSION['user_full_name'] = $user_full_name;
-            $_SESSION['user_department'] = $user_department;
-            // Load profile picture from users.csv
-            $profile_pic = '../pics/rso-bg.png';
-            if (!$is_admin && file_exists($users_file)) {
-                $file = fopen($users_file, 'r');
-                while (($data = fgetcsv($file)) !== false) {
-                    if ($data[0] === $email) {
-                        if (isset($data[5]) && $data[5]) {
-                            $profile_pic = $data[5];
-                        }
-                        break;
-                    }
-                }
-                fclose($file);
-            }
-            $_SESSION['profile_picture'] = $profile_pic;
+            
             if ($is_admin) {
+                $_SESSION['user_type'] = 'admin';
+                $_SESSION['user_full_name'] = 'Administrator';
+                $_SESSION['user_department'] = 'System Admin';
+                $_SESSION['profile_picture'] = '../pics/rso-bg.png';
                 $_SESSION['admin_logged_in'] = true;
                 header('Location: manage_faculty.php');
             } else {
+                $_SESSION['user_type'] = $user_data['user_type'];
+                $_SESSION['user_full_name'] = $user_data['full_name'];
+                $_SESSION['user_department'] = $user_data['department'];
+                $_SESSION['profile_picture'] = $user_data['profile_picture'] ?? '../pics/rso-bg.png';
                 header('Location: ../index.php');
             }
             exit;
