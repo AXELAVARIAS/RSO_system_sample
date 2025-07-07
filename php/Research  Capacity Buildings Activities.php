@@ -30,6 +30,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $db = getDB();
         
+        // Bulk delete entries
+        if (isset($_POST['bulk_delete']) && !empty($_POST['selected_ids']) && is_array($_POST['selected_ids'])) {
+            $ids = array_map('intval', $_POST['selected_ids']);
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $db->query("DELETE FROM research_capacity_activities WHERE id IN ($placeholders)", $ids);
+                $success_message = count($ids) . ' activities deleted successfully!';
+            } else {
+                $error_message = 'No activities selected for deletion.';
+            }
+        }
         // Delete entry
         if (isset($_POST['delete']) && isset($_POST['id'])) {
             $id = (int)$_POST['id'];
@@ -206,7 +217,7 @@ if (isset($_GET['edit'])) {
           <p>Track and manage research capacity building initiatives and training programs</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="uploadBtn" disabled>
+          <button class="btn btn-secondary" id="uploadBtn">
             <i class="fas fa-upload"></i>
             Upload Excel
           </button>
@@ -330,7 +341,55 @@ if (isset($_GET['edit'])) {
         </div>
       </div>
 
-
+      <!-- Upload Excel Modal -->
+      <div class="modal" id="uploadModal">
+        <div class="modal-content upload-modal-simple">
+          <div class="modal-header">
+            <h3>Upload Excel File</h3>
+            <button class="modal-close" id="closeUploadModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="upload-simple-instructions">
+              <p><strong>Instructions:</strong></p>
+              <ul>
+                <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
+                <li>File should contain these columns (in any order):</li>
+                <ul>
+                  <li><b>Date</b> (YYYY-MM-DD)</li>
+                  <li><b>Activity Name</b></li>
+                  <li><b>Venue</b></li>
+                  <li><b>Facilitators</b></li>
+                  <li><b>Number of Participants</b></li>
+                  <li><b>Status</b> (Scheduled, In Progress, Completed, Cancelled)</li>
+                </ul>
+                <li>First row should contain column headers</li>
+                <li>Maximum file size: 5MB</li>
+              </ul>
+              <div class="template-download-simple">
+                <a href="download_template.php" class="template-link" download>Download Template</a>
+              </div>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data" class="upload-form-simple">
+              <label for="excelFile" class="file-label-simple">Select File</label>
+              <input type="file" id="excelFile" name="excel_file" accept=".xls,.xlsx,.csv" required>
+              <div class="file-info" id="fileInfo"></div>
+              <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                  <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">Uploading...</div>
+              </div>
+              <div class="upload-result" id="uploadResult" style="display: none;"></div>
+            </form>
+          </div>
+          <div class="modal-footer simple-footer">
+            <button type="button" class="btn btn-secondary" id="cancelUpload">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitUpload" disabled>Upload File</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Data Table -->
       <div class="data-card">
@@ -345,10 +404,18 @@ if (isset($_GET['edit'])) {
           </div>
         </div>
         
-        <div class="table-container">
+        <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected activities?');">
+          <div class="bulk-delete-bar">
+            <div class="select-all-container">
+              <input type="checkbox" id="selectAll" class="styled-checkbox">
+              <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
+            </div>
+            <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+          </div>
           <table class="data-table" id="activitiesTable">
             <thead>
               <tr>
+                <th style="width:32px;"></th>
                 <th>Date</th>
                 <th>Activity Name</th>
                 <th>Venue</th>
@@ -361,7 +428,7 @@ if (isset($_GET['edit'])) {
             <tbody>
               <?php if (empty($entries)): ?>
                 <tr class="empty-state">
-                  <td colspan="7">
+                  <td colspan="8">
                     <div class="empty-content">
                       <i class="fas fa-chart-line"></i>
                       <h3>No research activities found</h3>
@@ -376,6 +443,7 @@ if (isset($_GET['edit'])) {
               <?php else: ?>
                 <?php foreach ($entries as $entry): ?>
                 <tr data-id="<?php echo $entry['id']; ?>">
+                  <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
                   <td data-label="Date">
                     <span class="date-info"><?php echo htmlspecialchars($entry['activity_date']); ?></span>
                   </td>
@@ -400,7 +468,7 @@ if (isset($_GET['edit'])) {
                   </td>
                   <td data-label="Actions">
                     <div class="action-buttons">
-                      <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
+                      <button type="button" class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
                               data-date="<?php echo htmlspecialchars($entry['activity_date']); ?>"
                               data-name="<?php echo htmlspecialchars($entry['activity_title']); ?>"
                               data-venue="<?php echo htmlspecialchars($entry['venue']); ?>"
@@ -422,7 +490,7 @@ if (isset($_GET['edit'])) {
               <?php endif; ?>
             </tbody>
           </table>
-        </div>
+        </form>
       </div>
     </div>
   </main>
@@ -457,8 +525,204 @@ if (isset($_GET['edit'])) {
       font-weight: inherit;
     }
 
+    /* Simplified Upload Modal */
+    .upload-modal-simple {
+      max-width: 400px;
+      min-width: 0;
+      width: 100%;
+      padding: 0;
+      background: var(--bg-modal);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+    }
+    .upload-simple-instructions {
+      padding: 1.2rem 1.2rem 0.5rem 1.2rem;
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+    .upload-simple-instructions ul {
+      margin: 0.5rem 0 0.5rem 1.2rem;
+      padding-left: 1.2rem;
+      font-size: 0.97rem;
+      color: var(--text-secondary);
+    }
+    .upload-simple-instructions ul ul {
+      margin: 0.2rem 0 0.2rem 1.2rem;
+      font-size: 0.95rem;
+    }
+    .template-download-simple {
+      margin: 1rem 0 0.5rem 0;
+    }
+    .template-link {
+      color: var(--btn-primary-bg);
+      text-decoration: underline;
+      font-size: 0.98rem;
+      font-weight: 500;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    .template-link:hover {
+      text-decoration: none;
+      color: var(--btn-primary-hover);
+    }
+    .upload-form-simple {
+      padding: 0 1.2rem 1.2rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .file-label-simple {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    #excelFile {
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.97rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      width: 100%;
+      margin-bottom: 0.2rem;
+    }
+    #excelFile:focus {
+      outline: 2px solid var(--btn-primary-bg);
+      border-color: var(--btn-primary-bg);
+    }
+    .file-info {
+      margin-top: 0.2rem;
+      padding: 0.4rem 0.7rem;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      font-size: 0.93rem;
+      color: var(--text-secondary);
+      width: 100%;
+      word-break: break-all;
+    }
+    .simple-footer {
+      padding: 1rem 1.2rem 1rem 1.2rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      border-radius: 0 0 12px 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+    @media (max-width: 600px) {
+      .upload-modal-simple {
+        max-width: 98vw;
+        min-width: 0;
+        padding: 0;
+      }
+      .upload-simple-instructions, .upload-form-simple {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+      .simple-footer {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+    }
+    .bulk-delete-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .select-all-container {
+      display: none;
+    }
+    .select-all-container.visible {
+      display: flex;
+    }
 
+    /* Modern custom checkbox styles */
+    input[type="checkbox"].styled-checkbox, #selectAll.styled-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: var(--bg-secondary);
+      border: 2px solid var(--btn-primary-bg);
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      vertical-align: middle;
+      margin: 0;
+    }
+    input[type="checkbox"].styled-checkbox:checked, #selectAll.styled-checkbox:checked {
+      background-color: var(--btn-primary-bg);
+      border-color: var(--btn-primary-bg);
+    }
+    input[type="checkbox"].styled-checkbox:checked::after, #selectAll.styled-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 6px;
+      height: 12px;
+      border: solid #fff;
+      border-width: 0 3px 3px 0;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      transition: border-color 0.2s;
+    }
+    input[type="checkbox"].styled-checkbox:focus, #selectAll.styled-checkbox:focus {
+      box-shadow: 0 0 0 2px var(--btn-primary-bg, #3b82f6);
+    }
+    /* Hide default checkmark for indeterminate state, show custom style */
+    #selectAll.styled-checkbox:indeterminate {
+      background-color: var(--btn-primary-bg);
+      border-color: var(--btn-primary-bg);
+    }
+    #selectAll.styled-checkbox:indeterminate::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 9px;
+      width: 14px;
+      height: 3px;
+      background: #fff;
+      border-radius: 2px;
+    }
+    /* Make label clickable and align nicely */
+    .select-all-container label {
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 0;
+      margin-left: 0.5em;
+      font-size: 1em;
+      color: var(--text-primary);
+    }
+    /* Slightly increase row checkbox spacing */
+    .data-table td:first-child, .data-table th:first-child {
+      text-align: center;
+      width: 36px;
+    }
 
+    /* Hide row checkboxes by default, show on row hover or if any checked */
+    .data-table .row-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .data-table tr:hover .row-checkbox,
+    .data-table.show-all-checkboxes .row-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Always show select-all checkbox above the table */
+    .select-all-container .styled-checkbox {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
 
   </style>
 
@@ -524,12 +788,16 @@ if (isset($_GET['edit'])) {
     // Modal functionality
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
+    const uploadModal = document.getElementById('uploadModal');
     const addBtn = document.getElementById('addBtn');
     const addFirstBtn = document.getElementById('addFirstBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
     const closeAddModal = document.getElementById('closeAddModal');
     const closeEditModal = document.getElementById('closeEditModal');
+    const closeUploadModal = document.getElementById('closeUploadModal');
     const cancelAdd = document.getElementById('cancelAdd');
     const cancelEdit = document.getElementById('cancelEdit');
+    const cancelUpload = document.getElementById('cancelUpload');
 
     function openModal(modal) {
       modal.style.display = 'flex';
@@ -543,13 +811,16 @@ if (isset($_GET['edit'])) {
 
     addBtn.addEventListener('click', () => openModal(addModal));
     if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
+    uploadBtn.addEventListener('click', () => openModal(uploadModal));
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     cancelAdd.addEventListener('click', () => closeModal(addModal));
     closeEditModal.addEventListener('click', () => closeModal(editModal));
     cancelEdit.addEventListener('click', () => closeModal(editModal));
+    closeUploadModal.addEventListener('click', () => closeModal(uploadModal));
+    cancelUpload.addEventListener('click', () => closeModal(uploadModal));
 
     // Close modal when clicking outside
-    [addModal, editModal].forEach(modal => {
+    [addModal, editModal, uploadModal].forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
           closeModal(modal);
@@ -600,8 +871,191 @@ if (isset($_GET['edit'])) {
       });
     });
 
+    // Upload functionality
+    const excelFile = document.getElementById('excelFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitUpload = document.getElementById('submitUpload');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadResult = document.getElementById('uploadResult');
+    const progressFill = document.querySelector('.progress-fill');
+    const progressText = document.querySelector('.progress-text');
 
+    // File selection handler
+    excelFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        fileInfo.innerHTML = `
+          <strong>Selected file:</strong> ${file.name}<br>
+          <strong>Size:</strong> ${fileSize} MB<br>
+          <strong>Type:</strong> ${file.type || 'Unknown'}
+        `;
+        submitUpload.disabled = false;
+        
+        // Hide any previous results
+        uploadResult.style.display = 'none';
+      } else {
+        fileInfo.innerHTML = '';
+        submitUpload.disabled = true;
+      }
+    });
 
+    // Upload submission handler
+    submitUpload.addEventListener('click', async () => {
+      const file = excelFile.files[0];
+      if (!file) return;
+
+      // Show progress
+      uploadProgress.style.display = 'block';
+      uploadResult.style.display = 'none';
+      submitUpload.disabled = true;
+      
+      // Simulate progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+        progressFill.style.width = progress + '%';
+      }, 200);
+
+      try {
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        const response = await fetch('upload_excel_research_capacity.php', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        // Show result
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
+          uploadResult.style.display = 'block';
+          
+          if (result.success) {
+            uploadResult.className = 'upload-result success';
+            uploadResult.innerHTML = `
+              <i class="fas fa-check-circle"></i>
+              <strong>Success!</strong> ${result.message}
+              ${result.data.errors && result.data.errors.length > 0 ? 
+                `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
+            `;
+            
+            // Reload page after successful upload to show new data
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            uploadResult.className = 'upload-result error';
+            uploadResult.innerHTML = `
+              <i class="fas fa-exclamation-circle"></i>
+              <strong>Error:</strong> ${result.message}
+            `;
+          }
+          
+          submitUpload.disabled = false;
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        uploadProgress.style.display = 'none';
+        uploadResult.style.display = 'block';
+        uploadResult.className = 'upload-result error';
+        uploadResult.innerHTML = `
+          <i class="fas fa-exclamation-circle"></i>
+          <strong>Error:</strong> Upload failed. Please try again.
+        `;
+        submitUpload.disabled = false;
+      }
+    });
+
+    // Reset upload form when modal is closed
+    function resetUploadForm() {
+      excelFile.value = '';
+      fileInfo.innerHTML = '';
+      uploadProgress.style.display = 'none';
+      uploadResult.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      submitUpload.disabled = true;
+    }
+
+    // Add reset to close handlers
+    closeUploadModal.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
+    
+    cancelUpload.addEventListener('click', () => {
+      closeModal(uploadModal);
+      resetUploadForm();
+    });
+
+    // Bulk delete button enable/disable
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    const selectAllContainer = document.querySelector('.select-all-container');
+    function updateBulkDeleteBtn() {
+      let checkedCount = 0;
+      rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+      if (checkedCount > 0) {
+        bulkDeleteBtn.style.display = '';
+        bulkDeleteBtn.disabled = checkedCount < 2;
+      } else {
+        bulkDeleteBtn.style.display = 'none';
+        bulkDeleteBtn.disabled = true;
+      }
+      // Show select-all if at least 1 is checked OR select-all is checked/indeterminate
+      if (selectAllContainer) {
+        if (
+          checkedCount > 0 ||
+          (selectAll && (selectAll.checked || selectAll.indeterminate))
+        ) {
+          selectAllContainer.classList.add('visible');
+        } else {
+          selectAllContainer.classList.remove('visible');
+        }
+      }
+      // Show all checkboxes if any are checked
+      const dataTable = document.getElementById('activitiesTable');
+      if (dataTable) {
+        if (checkedCount > 0) {
+          dataTable.classList.add('show-all-checkboxes');
+        } else {
+          dataTable.classList.remove('show-all-checkboxes');
+        }
+      }
+      // Update selectAll checkbox state
+      if (selectAll) {
+        if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
+          selectAll.checked = true;
+          selectAll.indeterminate = false;
+        } else if (checkedCount > 0) {
+          selectAll.checked = false;
+          selectAll.indeterminate = true;
+        } else {
+          selectAll.checked = false;
+          selectAll.indeterminate = false;
+        }
+      }
+    }
+    rowCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkDeleteBtn);
+    });
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+        updateBulkDeleteBtn();
+      });
+    }
+    updateBulkDeleteBtn();
 
   </script>
 </body>

@@ -50,6 +50,17 @@
   --btn-warning-bg: #f59e0b;
   --btn-warning-hover: #d97706;
   
+  /* Alert Colors */
+  --success-bg: #ecfdf5;
+  --success-color: #065f46;
+  --success-border: #a7f3d0;
+  --error-bg: #fef2f2;
+  --error-color: #991b1b;
+  --error-border: #fecaca;
+  --warning-bg: #fffbeb;
+  --warning-color: #92400e;
+  --warning-border: #fed7aa;
+  
   /* Input Colors */
   --input-bg: #ffffff;
   --input-border: #d1d5db;
@@ -106,6 +117,17 @@
   --btn-danger-hover: #f87171;
   --btn-warning-bg: #f59e0b;
   --btn-warning-hover: #fbbf24;
+  
+  /* Alert Colors (adjusted for dark theme) */
+  --success-bg: #064e3b;
+  --success-color: #6ee7b7;
+  --success-border: #059669;
+  --error-bg: #7f1d1d;
+  --error-color: #fca5a5;
+  --error-border: #dc2626;
+  --warning-bg: #78350f;
+  --warning-color: #fcd34d;
+  --warning-border: #d97706;
   
   /* Input Colors */
   --input-bg: #334155;
