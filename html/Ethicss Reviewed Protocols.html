@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ethics Reviewed Protocols</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:700,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/ethics reviewed protocols.css">
+  <link rel="stylesheet" href="../css/theme.css">
+</head>
+<body>
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" title="Toggle Theme" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+      <i class="fas fa-moon"></i>
+  </button>
+  
+  <header>
+    <div class="logo">
+      <img src="../pics/rso-bg.png" alt="UC Logo">
+      UC RSO
+    </div>
+    <nav>
+      <a href="../index.html">Dashboard</a>
+      <a href="Research  Capacity Buildings Activities.html">Research Capacity Building</a>
+      <a href="Data Collection Tools.html">Data Collection Tools</a>
+      <a href="Ethicss Reviewed Protocols.html" class="active">Ethics Reviewed Protocols</a>
+      <a href="Publication and Presentation.html">Publications and Presentations</a>
+      <a href="KPI records.html">KPI Records</a>
+    </nav>
+    <button class="login-btn" onclick="window.location.href='loginpage.html'">Login</button>
+    
+  </header>
+  <div class="dashboard-bg">
+    <div class="container">
+      <h1>Ethics Reviewed Protocols</h1>
+      <div class="subtitle">Monitor research ethics compliance and protocol approvals</div>
+      <div class="actions">
+        <button class="btn upload">&#8682; Upload Excel File</button>
+        <button class="btn add">+ Add New Entry</button>
+      </div>
+      <div class="panel">
+        <h2>Ethics Protocols Overview</h2>
+        <!-- Upload Form -->
+        <form id="uploadForm" enctype="multipart/form-data" style="margin-bottom: 20px;">
+          <input type="file" name="excel_file" id="excel_file" accept=".xls,.xlsx,.csv" required>
+          <button type="submit">Upload</button>
+        </form>
+        <div id="uploadMessage" style="margin-bottom: 10px; color: #b00;"></div>
+        <div class="search-bar-wrapper">
+          <span class="search-icon">&#128269;</span>
+          <input class="search-bar" type="text" placeholder="Search ethics protocols..." oninput="filterTable()">
+        </div>
+        <div class="table-container">
+          <table id="uploadedDataTable" border="1">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>List of Title</th>
+                <th>Department/Data Forwarded</th>
+                <th>Status</th>
+                <th>Action Taken</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Data will be inserted here by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../js/theme.js"></script>
+  <script>
+  document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    document.getElementById('uploadMessage').textContent = 'Uploading...';
+    fetch('../php/upload_excel_ethics_reviewed_protocols.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+      document.getElementById('uploadMessage').textContent = result.message;
+      if (result.success) {
+        fetchUploadedData();
+      }
+    })
+    .catch(error => {
+      document.getElementById('uploadMessage').textContent = 'Upload failed.';
+    });
+  });
+
+  function fetchUploadedData() {
+    fetch('../php/get_ethics_reviewed_protocols.php')
+      .then(response => response.json())
+      .then(data => {
+        var table = document.getElementById('uploadedDataTable');
+        var tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+        data.forEach((row, idx) => {
+          var tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td data-label="No."><strong>${row.protocol_number}</strong></td>
+            <td data-label="List of Title">${row.title}</td>
+            <td data-label="Department/Data Forwarded">${row.department}</td>
+            <td data-label="Status"><span class="status">${row.status}</span></td>
+            <td data-label="Action Taken">${row.action_taken}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+  }
+
+  // Optionally, load data on page load
+  window.onload = fetchUploadedData;
+
+  // Simple search filter
+  function filterTable() {
+    var input = document.querySelector('.search-bar');
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById('uploadedDataTable');
+    var trs = table.querySelectorAll('tbody tr');
+    trs.forEach(tr => {
+      var text = tr.textContent.toLowerCase();
+      tr.style.display = text.includes(filter) ? '' : 'none';
+    });
+  }
+  </script>
+</body>
+</html>
