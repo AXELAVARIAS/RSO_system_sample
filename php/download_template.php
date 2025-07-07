@@ -9,29 +9,25 @@ if (empty($_SESSION['logged_in'])) {
     exit;
 }
 
-// Data Collection Tools template download
+// Research Capacity Building Activities template download
 header('Content-Type: text/csv');
-header('Content-Disposition: attachment; filename="data_collection_tools_template.csv"');
+header('Content-Disposition: attachment; filename="research_capacity_building_template.csv"');
 $output = fopen('php://output', 'w');
 fputcsv($output, [
-    'Faculty Name',
-    'Degree',
-    'Sex',
-    'Research Title',
-    'Ownership',
-    'Presented At',
-    'Published Date',
-    'Journal/Publication'
+    'Date',
+    'Activity Name',
+    'Venue',
+    'Facilitators',
+    'Number of Participants',
+    'Status'
 ]);
 fputcsv($output, [
-    'John Doe',
-    'Ph.D.',
-    'Male',
-    'Sample Research Title',
-    'Author',
-    'International Conference 2024',
-    '2024-05-01',
-    'Journal of Research'
+    '2024-06-01',
+    'Research Workshop',
+    'Main Hall',
+    'Dr. Smith, Prof. Lee',
+    '50',
+    'Completed'
 ]);
 fclose($output);
 exit;
