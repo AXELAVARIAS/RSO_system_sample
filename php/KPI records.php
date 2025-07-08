@@ -18,18 +18,19 @@ $success_message = '';
 $error_message = '';
 
 // Handle Delete KPI Record
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_kpi_id'])) {
-    $delete_id = intval($_POST['delete_kpi_id']);
-    if ($delete_id > 0) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && !empty($_POST['selected_ids']) && is_array($_POST['selected_ids'])) {
+    $ids = array_map('intval', $_POST['selected_ids']);
+    if (!empty($ids)) {
         try {
             $db = getDB();
-            $db->query("DELETE FROM kpi_records WHERE id = ?", [$delete_id]);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $db->query("DELETE FROM kpi_records WHERE id IN ($placeholders)", $ids);
             // Do not set $success_message for delete
         } catch (Exception $e) {
             $error_message = 'Database error: ' . $e->getMessage();
         }
     } else {
-        $error_message = 'Invalid KPI record ID.';
+        $error_message = 'No KPI records selected for deletion.';
     }
 }
 
@@ -218,6 +219,38 @@ try {
   color: #ff6b6b;
   border-color: #ff6b6b;
 }
+  /* Bulk delete styles copied from Data Collection Tools */
+  .data-table .styled-checkbox {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .data-table tr:hover .styled-checkbox,
+  .data-table tr:focus-within .styled-checkbox {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .data-table .styled-checkbox:checked {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .data-table.show-all-checkboxes .styled-checkbox {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #bulkDeleteForm .select-all-container {
+    display: none;
+  }
+  #bulkDeleteForm.show-all-checkboxes .select-all-container {
+    display: flex !important;
+    align-items: center;
+  }
+  #bulkDeleteBtn {
+    display: none;
+  }
+  #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
+    display: inline-block;
+  }
 </style>
 
       <!-- Add KPI Modal -->
@@ -337,50 +370,61 @@ try {
             <input type="text" class="search-input" placeholder="Search KPI records..." id="searchInput">
           </div>
         </div>
-        <div class="table-container">
-          <table class="data-table" id="kpiTable">
-            <thead>
-              <tr>
-                <th>Faculty Name</th>
-                <th>Period</th>
-                <th>Publications</th>
-                <th>Trainings</th>
-                <th>Presentations</th>
-                <th>KPI Score</th>
-                <th>Performance</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php if (empty($kpi_entries)): ?>
-                <tr class="empty-state">
-                  <td colspan="8" style="text-align:center;">No KPI records found.</td>
+        <form id="bulkDeleteForm" method="post" action="">
+          <div class="bulk-delete-bar">
+            <div class="select-all-container">
+              <input type="checkbox" id="selectAll" class="styled-checkbox">
+              <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
+            </div>
+            <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="kpiTable">
+              <thead>
+                <tr>
+                  <th style="width:32px;"></th>
+                  <th>Faculty Name</th>
+                  <th>Period</th>
+                  <th>Publications</th>
+                  <th>Trainings</th>
+                  <th>Presentations</th>
+                  <th>KPI Score</th>
+                  <th>Performance</th>
+                  <th>Actions</th>
                 </tr>
-              <?php else: ?>
-                <?php foreach ($kpi_entries as $entry): ?>
-                  <tr>
-                    <td><?php echo htmlspecialchars($entry['faculty_name']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['quarter']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['publications_count']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['research_projects_count']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['presentations_count']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['performance_score']); ?></td>
-                    <td><?php echo htmlspecialchars($entry['performance_rating']); ?></td>
-                    <td>
-                      <div class="action-buttons">
-                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
-                        <form method="post" action="" style="display:inline;">
-                          <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
-                          <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
-                        </form>
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                <?php if (empty($kpi_entries)): ?>
+                  <tr class="empty-state">
+                    <td colspan="9" style="text-align:center;">No KPI records found.</td>
                   </tr>
-                <?php endforeach; ?>
-              <?php endif; ?>
-            </tbody>
-          </table>
-        </div>
+                <?php else: ?>
+                  <?php foreach ($kpi_entries as $entry): ?>
+                    <tr>
+                      <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
+                      <td><?php echo htmlspecialchars($entry['faculty_name']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['quarter']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['publications_count']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['research_projects_count']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['presentations_count']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['performance_score']); ?></td>
+                      <td><?php echo htmlspecialchars($entry['performance_rating']); ?></td>
+                      <td>
+                        <div class="action-buttons">
+                          <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                          <form method="post" action="" style="display:inline;">
+                            <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
+                            <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </form>
       </div>
     </div>
   </main>
@@ -549,6 +593,80 @@ uploadModal.addEventListener('click', (e) => {
     uploadProgress.style.display = 'none';
     uploadResult.style.display = 'none';
     submitUpload.disabled = true;
+  }
+});
+</script>
+<script>
+// Bulk delete button enable/disable and select all logic (copied and adapted from Data Collection Tools)
+const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+const selectAll = document.getElementById('selectAll');
+const selectAllContainer = document.querySelector('.select-all-container');
+function updateBulkDeleteBtn() {
+  let checkedCount = 0;
+  rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+  if (checkedCount > 0) {
+    bulkDeleteBtn.style.display = '';
+    bulkDeleteBtn.disabled = checkedCount < 2;
+  } else {
+    bulkDeleteBtn.style.display = 'none';
+    bulkDeleteBtn.disabled = true;
+  }
+  if (selectAllContainer) {
+    if (
+      checkedCount > 0 ||
+      (selectAll && (selectAll.checked || selectAll.indeterminate))
+    ) {
+      selectAllContainer.classList.add('visible');
+    } else {
+      selectAllContainer.classList.remove('visible');
+    }
+  }
+  const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+  if (bulkDeleteForm) {
+    if (checkedCount > 0) {
+      bulkDeleteForm.classList.add('show-all-checkboxes');
+    } else {
+      bulkDeleteForm.classList.remove('show-all-checkboxes');
+    }
+  }
+  if (selectAll) {
+    if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
+      selectAll.checked = true;
+      selectAll.indeterminate = false;
+    } else if (checkedCount > 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = true;
+    } else {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    }
+  }
+}
+rowCheckboxes.forEach(cb => {
+  cb.addEventListener('change', updateBulkDeleteBtn);
+});
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+    updateBulkDeleteBtn();
+  });
+}
+updateBulkDeleteBtn();
+document.addEventListener('DOMContentLoaded', function() {
+  const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+  if (bulkDeleteForm) {
+    bulkDeleteForm.addEventListener('submit', function(e) {
+      const checkboxes = bulkDeleteForm.querySelectorAll('.row-checkbox:checked');
+      if (checkboxes.length === 0) {
+        e.preventDefault();
+        return false;
+      }
+      if (!confirm('Are you sure you want to delete the selected KPI records?')) {
+        e.preventDefault();
+        return false;
+      }
+    });
   }
 });
 </script>
