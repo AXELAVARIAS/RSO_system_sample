@@ -407,7 +407,7 @@ try {
                       <td data-label="Action Taken"><?php echo htmlspecialchars($entry['action_taken']); ?></td>
                       <td data-label="Actions">
                         <div class="action-buttons">
-                          <button class="action-btn edit-btn"
+                          <button type="button" class="action-btn edit-btn"
                             data-id="<?php echo $entry['id']; ?>"
                             data-protocol_no="<?php echo htmlspecialchars($entry['protocol_number']); ?>"
                             data-title="<?php echo htmlspecialchars($entry['title']); ?>"
