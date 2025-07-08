@@ -87,8 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                     $delimiter = "\t";
                 }
                 
-                error_log("Detected delimiter: " . ($delimiter === "\t" ? "TAB" : $delimiter));
-                
                 while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                     if (!empty(array_filter($row))) { // Skip empty rows
                         $data[] = $row;
@@ -113,20 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         if (!empty($data)) {
             error_log("First row column count: " . count($data[0]));
             error_log("First row raw: " . json_encode($data[0]));
-            
-            // If first row has only one column, try manual parsing
-            if (count($data[0]) === 1 && $file_extension === 'csv') {
-                error_log("Detected single column - attempting manual parsing");
-                $data = manualCSVParsing($file['tmp_name']);
-                error_log("After manual parsing - rows: " . count($data));
-                if (!empty($data)) {
-                    error_log("First row after manual parsing: " . json_encode($data[0]));
-                }
-            }
         }
         
         // Validate header row
-        $expected_headers = ['Date OF Application', 'Name(s) of faculty/research worker', 'Title of Paper', 'Department', 'Research Subsidy', 'Status', 'Local/International'];
+        $expected_headers = ['Faculty Name', 'Period', 'Publications', 'Presentations', 'Research Projects', 'KPI Score', 'Performance Rating'];
         $first_row = $data[0];
         
         // Clean headers - remove BOM, quotes, and extra whitespace
@@ -155,26 +143,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         
         // Define column mapping for common variations
         $column_mapping = [
-            'Date OF Application' => [
-                'date of application', 'application date', 'date', 'submission date', 'published date', 'presented at', 'published date'
+            'Faculty Name' => [
+                'faculty name', 'name', 'researcher name', 'author name', 'faculty/research worker'
             ],
-            'Name(s) of faculty/research worker' => [
-                'name(s) of faculty/research worker', 'faculty name', 'author name', 'researcher name', 'name', 'author', 'faculty/research worker', 'faculty/research worker'
+            'Period' => [
+                'period', 'quarter', 'time period', 'reporting period', 'quarter/year'
             ],
-            'Title of Paper' => [
-                'title of paper', 'research title', 'paper title', 'title', 'research paper title', 'publication title'
+            'Publications' => [
+                'publications', 'publications count', 'number of publications', 'publication count'
             ],
-            'Department' => [
-                'department', 'faculty', 'school', 'college', 'institution'
+            'Presentations' => [
+                'presentations', 'presentations count', 'number of presentations', 'presentation count'
             ],
-            'Research Subsidy' => [
-                'research subsidy', 'subsidy', 'funding', 'grant amount', 'research funding', 'ownership'
+            'Research Projects' => [
+                'research projects', 'research projects count', 'number of research projects', 'projects count', 'trainings'
             ],
-            'Status' => [
-                'status', 'publication status', 'paper status', 'submission status'
+            'KPI Score' => [
+                'kpi score', 'performance score', 'score', 'kpi', 'performance'
             ],
-            'Local/International' => [
-                'local/international', 'scope', 'local or international', 'publication scope', 'journal/publication', 'journal/publication'
+            'Performance Rating' => [
+                'performance rating', 'rating', 'performance level', 'rating level'
             ]
         ];
         
@@ -182,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         $matched_headers = [];
         $unmatched_headers = [];
         
-            foreach ($first_row as $idx => $header) {
+        foreach ($first_row as $idx => $header) {
             $header_lower = strtolower(trim($header));
             $matched = false;
             
@@ -205,8 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                             error_log("Variation match found: '$header' -> '$expected' at index $idx");
                             $matched = true;
                             break 2;
-            }
-        }
+                        }
+                    }
                 }
             }
             
@@ -233,8 +221,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         error_log("Unmatched headers: " . json_encode($unmatched_headers));
         
         // Check if we have the minimum required columns
-        $required_columns = ['Date OF Application', 'Name(s) of faculty/research worker', 'Title of Paper', 'Research Subsidy'];
-        $optional_columns = ['Department', 'Status', 'Local/International'];
+        $required_columns = ['Faculty Name', 'Period', 'Publications', 'Presentations', 'Research Projects', 'KPI Score'];
+        $optional_columns = ['Performance Rating'];
         $missing_required_columns = [];
         $missing_optional_columns = [];
         
@@ -274,86 +262,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             }
             return '';
         }
+        
         // Process data rows (skip header)
         $success_count = 0;
         $error_count = 0;
         $errors = [];
-        $valid_statuses = ['Draft', 'Submitted', 'Under Review', 'Accepted', 'Published', 'Rejected'];
-        $valid_scopes = ['Local', 'International'];
+        $valid_ratings = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent', 'Outstanding'];
+        
         foreach (array_slice($data, 1) as $i => $row) {
             // Skip empty rows
             if (empty(array_filter($row, function($v){return trim($v) !== '';}))) {
                 continue;
             }
+            
             // Get and trim all values
-            $date = get_col($row, $matched_headers, 'Date OF Application');
-            $author = get_col($row, $matched_headers, 'Name(s) of faculty/research worker');
-            $title = get_col($row, $matched_headers, 'Title of Paper');
-            $department = get_col($row, $matched_headers, 'Department');
-            $subsidy = get_col($row, $matched_headers, 'Research Subsidy');
-            $status = get_col($row, $matched_headers, 'Status');
-            $scope = get_col($row, $matched_headers, 'Local/International');
+            $faculty_name = get_col($row, $matched_headers, 'Faculty Name');
+            $period = get_col($row, $matched_headers, 'Period');
+            $publications = get_col($row, $matched_headers, 'Publications');
+            $presentations = get_col($row, $matched_headers, 'Presentations');
+            $research_projects = get_col($row, $matched_headers, 'Research Projects');
+            $kpi_score = get_col($row, $matched_headers, 'KPI Score');
+            $performance_rating = get_col($row, $matched_headers, 'Performance Rating');
             
             // Set default values for missing optional columns
-            if ($department === '') {
-                $department = 'Not Specified';
-            }
-            if ($status === '') {
-                $status = 'Draft';
-            }
-            if ($scope === '') {
-                $scope = 'Local';
+            if ($performance_rating === '') {
+                $performance_rating = 'Good';
             }
             
             // Debug: Log the extracted values
-            error_log("Row " . ($i + 2) . " values - Date: '$date', Author: '$author', Title: '$title', Department: '$department', Subsidy: '$subsidy'");
+            error_log("Row " . ($i + 2) . " values - Faculty: '$faculty_name', Period: '$period', Publications: '$publications', Presentations: '$presentations', Projects: '$research_projects', Score: '$kpi_score'");
             
             // Validate required fields
-            if ($date === '' || $author === '' || $title === '' || $subsidy === '') {
+            if ($faculty_name === '' || $period === '' || $publications === '' || $presentations === '' || $research_projects === '' || $kpi_score === '') {
                 $error_count++;
-                $errors[] = "Row " . ($i + 2) . ": Missing required fields. Date: '$date', Author: '$author', Title: '$title', Subsidy: '$subsidy'";
+                $errors[] = "Row " . ($i + 2) . ": Missing required fields. Faculty: '$faculty_name', Period: '$period', Publications: '$publications', Presentations: '$presentations', Projects: '$research_projects', Score: '$kpi_score'";
                 continue;
             }
-            // Handle date: accept YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, etc.
-            $date = trim($date);
-            $date_parsed = false;
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-                $date_parsed = $date;
-            } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date)) {
-                // Convert DD/MM/YYYY or MM/DD/YYYY to YYYY-MM-DD
-                $parts = explode('/', $date);
-                // Try DD/MM/YYYY first (common outside US)
-                if ((int)$parts[0] > 12) {
-                    $date_parsed = $parts[2] . '-' . str_pad($parts[1],2,'0',STR_PAD_LEFT) . '-' . str_pad($parts[0],2,'0',STR_PAD_LEFT);
-                } else {
-                    // Try MM/DD/YYYY (US style)
-                    $date_parsed = $parts[2] . '-' . str_pad($parts[0],2,'0',STR_PAD_LEFT) . '-' . str_pad($parts[1],2,'0',STR_PAD_LEFT);
-                }
-            } else {
-                $timestamp = strtotime($date);
-                if ($timestamp !== false) {
-                    $date_parsed = date('Y-m-d', $timestamp);
-                }
+            
+            // Validate numeric fields
+            $publications_int = (int)preg_replace('/[^0-9]/', '', $publications);
+            $presentations_int = (int)preg_replace('/[^0-9]/', '', $presentations);
+            $research_projects_int = (int)preg_replace('/[^0-9]/', '', $research_projects);
+            $kpi_score_float = (float)preg_replace('/[^0-9.]/', '', $kpi_score);
+            
+            if ($publications_int < 0) $publications_int = 0;
+            if ($presentations_int < 0) $presentations_int = 0;
+            if ($research_projects_int < 0) $research_projects_int = 0;
+            if ($kpi_score_float < 0) $kpi_score_float = 0;
+            
+            // Validate performance rating (case-insensitive, trim)
+            $performance_rating_clean = ucwords(strtolower(trim($performance_rating)));
+            if (!in_array($performance_rating_clean, $valid_ratings)) {
+                $performance_rating_clean = 'Good';
             }
-            if (!$date_parsed) {
-                $error_count++;
-                $errors[] = "Row " . ($i + 2) . ": Invalid date format (got '$date').";
-                continue;
-            }
-            // Validate status (case-insensitive, trim)
-            $status_clean = ucwords(strtolower(trim($status)));
-            if (!in_array($status_clean, $valid_statuses)) {
-                $status_clean = 'Draft';
-            }
-            // Validate scope (case-insensitive, trim)
-            $scope_clean = ucwords(strtolower(trim($scope)));
-            if (!in_array($scope_clean, $valid_scopes)) {
-                $scope_clean = 'Local';
-            }
+            
             try {
                 $db->query(
-                    "INSERT INTO publication_presentations (application_date, author_name, paper_title, department, research_subsidy, status, scope) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [$date_parsed, $author, $title, $department, $subsidy, $status_clean, $scope_clean]
+                    "INSERT INTO kpi_records (faculty_name, quarter, publications_count, presentations_count, research_projects_count, performance_score, performance_rating) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [$faculty_name, $period, $publications_int, $presentations_int, $research_projects_int, $kpi_score_float, $performance_rating_clean]
                 );
                 $success_count++;
             } catch (Exception $e) {
@@ -365,19 +331,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         // Prepare response
         if ($success_count > 0) {
             $response['success'] = true;
-            $response['message'] = "Successfully imported $success_count publications.";
+            $response['message'] = "Successfully imported $success_count KPI records.";
             
             // Add information about default values if any optional columns were missing
             if (!empty($missing_optional_columns)) {
                 $default_info = [];
-                if (in_array('Department', $missing_optional_columns)) {
-                    $default_info[] = 'Department: "Not Specified"';
-                }
-                if (in_array('Status', $missing_optional_columns)) {
-                    $default_info[] = 'Status: "Draft"';
-                }
-                if (in_array('Local/International', $missing_optional_columns)) {
-                    $default_info[] = 'Local/International: "Local"';
+                if (in_array('Performance Rating', $missing_optional_columns)) {
+                    $default_info[] = 'Performance Rating: "Good"';
                 }
                 if (!empty($default_info)) {
                     $response['message'] .= " Default values applied: " . implode(', ', $default_info) . ".";
@@ -394,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                 'missing_optional_columns' => $missing_optional_columns ?? []
             ];
         } else {
-            $response['message'] = "No publications were imported. $error_count rows had errors.";
+            $response['message'] = "No KPI records were imported. $error_count rows had errors.";
             $response['data'] = [
                 'success_count' => 0,
                 'error_count' => $error_count,
@@ -486,44 +446,6 @@ function manualExcelParse($file_path) {
                     $data[] = $row_data;
                 }
             }
-        }
-    }
-    
-    return $data;
-}
-
-// Manual CSV parsing function for problematic files
-function manualCSVParsing($file_path) {
-    $data = [];
-    $content = file_get_contents($file_path);
-    
-    // Remove BOM if present
-    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-    
-    // Split into lines
-    $lines = explode("\n", $content);
-    
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line)) continue;
-        
-        // Try different delimiters
-        $delimiters = [',', ';', "\t"];
-        $best_delimiter = ',';
-        $max_columns = 1;
-        
-        foreach ($delimiters as $delimiter) {
-            $columns = str_getcsv($line, $delimiter);
-            if (count($columns) > $max_columns) {
-                $max_columns = count($columns);
-                $best_delimiter = $delimiter;
-            }
-        }
-        
-        // Parse with best delimiter
-        $row = str_getcsv($line, $best_delimiter);
-        if (!empty(array_filter($row))) {
-            $data[] = $row;
         }
     }
     

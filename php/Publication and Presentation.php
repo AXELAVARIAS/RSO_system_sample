@@ -28,6 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->query("DELETE FROM publication_presentations WHERE id = ?", [$id]);
             $success_message = 'Publication deleted successfully!';
         }
+        // Handle bulk delete
+        elseif (isset($_POST['bulk_delete']) && isset($_POST['selected_ids']) && is_array($_POST['selected_ids'])) {
+            $selected_ids = array_map('intval', $_POST['selected_ids']);
+            if (!empty($selected_ids)) {
+                $placeholders = str_repeat('?,', count($selected_ids) - 1) . '?';
+                $db->query("DELETE FROM publication_presentations WHERE id IN ($placeholders)", $selected_ids);
+                $success_message = count($selected_ids) . ' publication(s) deleted successfully!';
+            } else {
+                $error_message = 'No publications selected for deletion.';
+            }
+        }
         // Handle edit save
         elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
             $id = (int)$_POST['id'];
@@ -345,16 +356,17 @@ if (isset($_GET['edit'])) {
                 <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
                 <li>File should contain these columns (in any order):</li>
                 <ul>
-                  <li><b>Date OF Application</b> (YYYY-MM-DD)</li>
-                  <li><b>Name(s) of faculty/research worker</b></li>
-                  <li><b>Title of Paper</b></li>
-                  <li><b>Department</b></li>
-                  <li><b>Research Subsidy</b></li>
-                  <li><b>Status</b> (Draft, Submitted, Under Review, Accepted, Published, Rejected)</li>
-                  <li><b>Local/International</b> (Local, International)</li>
+                  <li><b>Date OF Application</b> (YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY) - <strong>Required</strong></li>
+                  <li><b>Name(s) of faculty/research worker</b> (or Faculty Name, Author Name) - <strong>Required</strong></li>
+                  <li><b>Title of Paper</b> (or Research Title, Paper Title) - <strong>Required</strong></li>
+                  <li><b>Research Subsidy</b> (or Funding, Grant Amount, Ownership) - <strong>Required</strong></li>
+                  <li><b>Department</b> (or Faculty, School, College) - <em>Optional (default: "Not Specified")</em></li>
+                  <li><b>Status</b> (Draft, Submitted, Under Review, Accepted, Published, Rejected) - <em>Optional (default: "Draft")</em></li>
+                  <li><b>Local/International</b> (Local, International) - <em>Optional (default: "Local")</em></li>
                 </ul>
                 <li>First row should contain column headers</li>
                 <li>Maximum file size: 5MB</li>
+                <li><strong>Note:</strong> The system will automatically map common column name variations</li>
               </ul>
               <div class="template-download-simple">
                 <a href="download_template_publications.php" class="template-link" download>Download Template</a>
@@ -394,7 +406,7 @@ if (isset($_GET['edit'])) {
         </div>
         
         <div class="table-container">
-          <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected publications?');">
+          <form id="bulkDeleteForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" onsubmit="return confirm('Are you sure you want to delete the selected publications?');">
             <div class="bulk-delete-bar">
               <div class="select-all-container">
                 <input type="checkbox" id="selectAll" class="styled-checkbox">
@@ -472,12 +484,9 @@ if (isset($_GET['edit'])) {
                                 data-local-international="<?php echo htmlspecialchars($entry['scope']); ?>">
                           <i class="fas fa-edit"></i>
                         </button>
-                        <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this publication?');">
-                          <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
-                          <button type="submit" name="delete" class="action-btn delete-btn">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </form>
+                        <button type="button" class="action-btn delete-btn" data-id="<?php echo $entry['id']; ?>">
+                          <i class="fas fa-trash"></i>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -900,6 +909,35 @@ if (isset($_GET['edit'])) {
       }
     });
 
+    // Individual delete functionality
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.delete-btn')) {
+        const btn = e.target.closest('.delete-btn');
+        const id = btn.dataset.id;
+        
+        if (confirm('Are you sure you want to delete this publication?')) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>';
+          
+          const idInput = document.createElement('input');
+          idInput.type = 'hidden';
+          idInput.name = 'id';
+          idInput.value = id;
+          
+          const deleteInput = document.createElement('input');
+          deleteInput.type = 'hidden';
+          deleteInput.name = 'delete';
+          deleteInput.value = '1';
+          
+          form.appendChild(idInput);
+          form.appendChild(deleteInput);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      }
+    });
+
     // Search functionality
     const searchInput = document.getElementById('searchInput');
     const tableRows = document.querySelectorAll('#publicationsTable tbody tr');
@@ -977,11 +1015,33 @@ if (isset($_GET['edit'])) {
         // Show result
         uploadResult.style.display = 'block';
         uploadResult.className = `upload-result ${result.success ? 'success' : 'error'}`;
+        
+        let errorDetails = '';
+        if (result.data) {
+          if (result.data.errors && result.data.errors.length > 0) {
+            errorDetails += '<br><br><strong>Row Errors:</strong><br>' + result.data.errors.join('<br>');
+          }
+          if (result.data.found_headers) {
+            errorDetails += '<br><br><strong>Found Headers:</strong><br>' + result.data.found_headers.join(', ');
+          }
+          if (result.data.matched_columns) {
+            errorDetails += '<br><br><strong>Matched Columns:</strong><br>' + result.data.matched_columns.join(', ');
+          }
+          if (result.data.missing_columns) {
+            errorDetails += '<br><br><strong>Missing Required Columns:</strong><br>' + result.data.missing_columns.join(', ');
+          }
+          if (result.data.unmatched_headers) {
+            errorDetails += '<br><br><strong>Unmatched Headers:</strong><br>' + result.data.unmatched_headers.join(', ');
+          }
+          if (result.data.missing_optional_columns && result.data.missing_optional_columns.length > 0) {
+            errorDetails += '<br><br><strong>Missing Optional Columns (defaults applied):</strong><br>' + result.data.missing_optional_columns.join(', ');
+          }
+        }
+        
         uploadResult.innerHTML = `
           <strong>${result.success ? 'Success!' : 'Error:'}</strong><br>
           ${result.message}
-          ${result.data && result.data.errors && result.data.errors.length > 0 ? 
-            '<br><br><strong>Errors:</strong><br>' + result.data.errors.join('<br>') : ''}
+          ${errorDetails}
         `;
         
         if (result.success) {
@@ -1042,6 +1102,7 @@ if (isset($_GET['edit'])) {
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
     const selectAll = document.getElementById('selectAll');
     const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+    
     function updateBulkDeleteBtn() {
       let checkedCount = 0;
       rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
@@ -1066,6 +1127,19 @@ if (isset($_GET['edit'])) {
         }
       }
     }
+    
+    // Add form submission debugging
+    bulkDeleteForm.addEventListener('submit', function(e) {
+      const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+      if (selectedCheckboxes.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one publication to delete.');
+        return false;
+      }
+      
+      const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+      console.log('Submitting bulk delete with IDs:', selectedIds);
+    });
     rowCheckboxes.forEach(cb => {
       cb.addEventListener('change', updateBulkDeleteBtn);
     });
