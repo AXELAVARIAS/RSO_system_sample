@@ -61,6 +61,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_kpi'])) {
     }
 }
 
+// Handle Edit KPI Record
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_kpi']) && isset($_POST['kpi_id'])) {
+    $kpi_id = intval($_POST['kpi_id']);
+    $faculty_name = trim($_POST['faculty_name'] ?? '');
+    $quarter = trim($_POST['quarter'] ?? '');
+    $publications_count = intval($_POST['publications_count'] ?? 0);
+    $trainings_count = intval($_POST['trainings_count'] ?? 0);
+    $presentations_count = intval($_POST['presentations_count'] ?? 0);
+    $performance_score = floatval($_POST['performance_score'] ?? 0);
+    $performance_rating = trim($_POST['performance_rating'] ?? 'Fair');
+    if ($kpi_id > 0 && $faculty_name && $quarter) {
+        try {
+            $db = getDB();
+            $db->query("UPDATE kpi_records SET faculty_name=?, quarter=?, publications_count=?, research_projects_count=?, presentations_count=?, performance_score=?, performance_rating=? WHERE id=?", [
+                $faculty_name, $quarter, $publications_count, $trainings_count, $presentations_count, $performance_score, $performance_rating, $kpi_id
+            ]);
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
+    } else {
+        $error_message = 'Please fill in all required fields.';
+    }
+}
+
+// Handle Delete Single KPI Record
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_kpi_id'])) {
+    $delete_id = intval($_POST['delete_kpi_id']);
+    if ($delete_id > 0) {
+        try {
+            $db = getDB();
+            $db->query("DELETE FROM kpi_records WHERE id = ?", [$delete_id]);
+            // Optionally set $success_message
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
+    } else {
+        $error_message = 'Invalid KPI record ID.';
+    }
+}
+
 // Fetch KPI records from database
 $kpi_entries = [];
 try {
@@ -307,6 +349,61 @@ try {
         </div>
       </div>
 
+      <!-- Edit KPI Modal -->
+      <div class="modal" id="editModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit KPI Record</h3>
+            <button class="modal-close" id="closeEditModal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form class="modal-form" method="post" action="">
+            <input type="hidden" name="edit_kpi" value="1">
+            <input type="hidden" id="edit_kpi_id" name="kpi_id">
+            <div class="form-group">
+              <label for="edit_faculty_name">Faculty Name</label>
+              <input type="text" id="edit_faculty_name" name="faculty_name" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_quarter">Period/Quarter</label>
+              <input type="text" id="edit_quarter" name="quarter" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_publications_count">Publications</label>
+              <input type="number" id="edit_publications_count" name="publications_count" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_trainings_count">Trainings</label>
+              <input type="number" id="edit_trainings_count" name="trainings_count" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_presentations_count">Presentations</label>
+              <input type="number" id="edit_presentations_count" name="presentations_count" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_performance_score">KPI Score</label>
+              <input type="number" step="0.01" id="edit_performance_score" name="performance_score" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_performance_rating">Performance</label>
+              <select id="edit_performance_rating" name="performance_rating" required>
+                <option value="Poor">Poor</option>
+                <option value="Fair">Fair</option>
+                <option value="Good">Good</option>
+                <option value="Very Good">Very Good</option>
+                <option value="Excellent">Excellent</option>
+                <option value="Outstanding">Outstanding</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Upload Excel Modal -->
       <div class="modal" id="uploadModal">
         <div class="modal-content upload-modal-simple">
@@ -400,7 +497,7 @@ try {
                   </tr>
                 <?php else: ?>
                   <?php foreach ($kpi_entries as $entry): ?>
-                    <tr>
+                    <tr data-id="<?php echo $entry['id']; ?>" data-faculty="<?php echo htmlspecialchars($entry['faculty_name']); ?>" data-quarter="<?php echo htmlspecialchars($entry['quarter']); ?>" data-publications="<?php echo htmlspecialchars($entry['publications_count']); ?>" data-trainings="<?php echo htmlspecialchars($entry['research_projects_count']); ?>" data-presentations="<?php echo htmlspecialchars($entry['presentations_count']); ?>" data-score="<?php echo htmlspecialchars($entry['performance_score']); ?>" data-rating="<?php echo htmlspecialchars($entry['performance_rating']); ?>">
                       <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
                       <td><?php echo htmlspecialchars($entry['faculty_name']); ?></td>
                       <td><?php echo htmlspecialchars($entry['quarter']); ?></td>
@@ -411,12 +508,12 @@ try {
                       <td><?php echo htmlspecialchars($entry['performance_rating']); ?></td>
                       <td>
                         <div class="action-buttons">
-                          <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
-                          <form method="post" action="" style="display:inline;">
-                            <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
-                            <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
-                          </form>
+                          <button class="action-btn edit-btn" type="button"><i class="fas fa-edit"></i></button>
                         </div>
+                        <form method="post" action="" style="display:inline;">
+                          <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
+                          <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
+                        </form>
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -668,6 +765,61 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+});
+</script>
+<script>
+// Edit Modal functionality
+const editModal = document.getElementById('editModal');
+const closeEditModal = document.getElementById('closeEditModal');
+const cancelEdit = document.getElementById('cancelEdit');
+const editKpiId = document.getElementById('edit_kpi_id');
+const editFacultyName = document.getElementById('edit_faculty_name');
+const editQuarter = document.getElementById('edit_quarter');
+const editPublicationsCount = document.getElementById('edit_publications_count');
+const editTrainingsCount = document.getElementById('edit_trainings_count');
+const editPresentationsCount = document.getElementById('edit_presentations_count');
+const editPerformanceScore = document.getElementById('edit_performance_score');
+const editPerformanceRating = document.getElementById('edit_performance_rating');
+
+function openEditModal(row) {
+  editKpiId.value = row.getAttribute('data-id');
+  editFacultyName.value = row.getAttribute('data-faculty');
+  editQuarter.value = row.getAttribute('data-quarter');
+  editPublicationsCount.value = row.getAttribute('data-publications');
+  editTrainingsCount.value = row.getAttribute('data-trainings');
+  editPresentationsCount.value = row.getAttribute('data-presentations');
+  editPerformanceScore.value = row.getAttribute('data-score');
+  editPerformanceRating.value = row.getAttribute('data-rating');
+  editModal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeEditModalFunc() {
+  editModal.style.display = 'none';
+  document.body.style.overflow = 'auto';
+}
+closeEditModal.addEventListener('click', closeEditModalFunc);
+cancelEdit.addEventListener('click', closeEditModalFunc);
+editModal.addEventListener('click', (e) => {
+  if (e.target === editModal) closeEditModalFunc();
+});
+document.querySelectorAll('.edit-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const row = this.closest('tr');
+    openEditModal({
+      getAttribute: (attr) => {
+        switch(attr) {
+          case 'data-id': return row.querySelector('input.row-checkbox').value;
+          case 'data-faculty': return row.children[1].textContent.trim();
+          case 'data-quarter': return row.children[2].textContent.trim();
+          case 'data-publications': return row.children[3].textContent.trim();
+          case 'data-trainings': return row.children[4].textContent.trim();
+          case 'data-presentations': return row.children[5].textContent.trim();
+          case 'data-score': return row.children[6].textContent.trim();
+          case 'data-rating': return row.children[7].textContent.trim();
+        }
+      }
+    });
+  });
 });
 </script>
 </body>
