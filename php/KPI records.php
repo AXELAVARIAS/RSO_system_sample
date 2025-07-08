@@ -510,10 +510,6 @@ try {
                         <div class="action-buttons">
                           <button class="action-btn edit-btn" type="button"><i class="fas fa-edit"></i></button>
                         </div>
-                        <form method="post" action="" style="display:inline;">
-                          <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
-                          <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
-                        </form>
                       </td>
                     </tr>
                   <?php endforeach; ?>
@@ -522,6 +518,13 @@ try {
             </table>
           </div>
         </form>
+        <?php if (!empty($kpi_entries)): ?>
+          <?php foreach ($kpi_entries as $entry): ?>
+            <form method="post" action="" style="display:none;" id="delete-form-<?php echo $entry['id']; ?>">
+              <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
+            </form>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
     </div>
   </main>
@@ -704,7 +707,7 @@ function updateBulkDeleteBtn() {
   rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
   if (checkedCount > 0) {
     bulkDeleteBtn.style.display = '';
-    bulkDeleteBtn.disabled = checkedCount < 2;
+    bulkDeleteBtn.disabled = false;
   } else {
     bulkDeleteBtn.style.display = 'none';
     bulkDeleteBtn.disabled = true;
@@ -819,6 +822,19 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
         }
       }
     });
+  });
+});
+</script>
+<script>
+// In the table, change the delete button to submit the correct form by JS
+document.querySelectorAll('.delete-btn').forEach((btn, idx) => {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    const row = btn.closest('tr');
+    const id = row.getAttribute('data-id');
+    if (confirm('Are you sure you want to delete this KPI record?')) {
+      document.getElementById('delete-form-' + id).submit();
+    }
   });
 });
 </script>
