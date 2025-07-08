@@ -213,11 +213,11 @@ if (isset($_GET['edit'])) {
           <p>Manage research publications, presentations, and academic outputs</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="uploadBtn">
+          <button class="btn btn-secondary" id="uploadBtn" type="button">
             <i class="fas fa-upload"></i>
             Upload Excel
           </button>
-          <button class="btn btn-primary" id="addBtn">
+          <button class="btn btn-primary" id="addBtn" type="button">
             <i class="fas fa-plus"></i>
             Add New Publication
           </button>
@@ -406,7 +406,7 @@ if (isset($_GET['edit'])) {
         </div>
         
         <div class="table-container">
-          <form id="bulkDeleteForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" onsubmit="return confirm('Are you sure you want to delete the selected publications?');">
+          <form id="bulkDeleteForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
             <div class="bulk-delete-bar">
               <div class="select-all-container">
                 <input type="checkbox" id="selectAll" class="styled-checkbox">
@@ -436,7 +436,7 @@ if (isset($_GET['edit'])) {
                         <i class="fas fa-book"></i>
                         <h3>No publications found</h3>
                         <p>Add your first publication to get started</p>
-                        <button class="btn btn-primary" id="addFirstBtn">
+                        <button class="btn btn-primary" id="addFirstBtn" type="button">
                           <i class="fas fa-plus"></i>
                           Add Publication
                         </button>

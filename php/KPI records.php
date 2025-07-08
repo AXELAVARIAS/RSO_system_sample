@@ -17,79 +17,56 @@ if (isset($_POST['logout'])) {
 $success_message = '';
 $error_message = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $db = getDB();
-        
-        // Handle delete
-        if (isset($_POST['delete']) && isset($_POST['id'])) {
-            $id = (int)$_POST['id'];
-            $db->query("DELETE FROM kpi_records WHERE id = ?", [$id]);
-            $success_message = 'KPI record deleted successfully!';
+// Handle Delete KPI Record
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_kpi_id'])) {
+    $delete_id = intval($_POST['delete_kpi_id']);
+    if ($delete_id > 0) {
+        try {
+            $db = getDB();
+            $db->query("DELETE FROM kpi_records WHERE id = ?", [$delete_id]);
+            // Do not set $success_message for delete
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
         }
-        // Handle edit save
-        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
-            $id = (int)$_POST['id'];
-            $faculty_name = $_POST['faculty_name'] ?? '';
-            $period = $_POST['period'] ?? '';
-            $publications = $_POST['publications'] ?? '';
-            $trainings = $_POST['trainings'] ?? '';
-            $presentations = $_POST['presentations'] ?? '';
-            $kpi_score = $_POST['kpi_score'] ?? '';
-            $performance = $_POST['performance'] ?? '';
-            
-            if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
-                $db->query("UPDATE kpi_records SET faculty_name = ?, quarter = ?, publications_count = ?, presentations_count = ?, research_projects_count = ?, performance_score = ?, performance_rating = ? WHERE id = ?", 
-                    [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance, $id]);
-                $success_message = 'KPI record updated successfully!';
-            } else {
-                $error_message = 'Please fill in all required fields.';
-            }
-        }
-        // Handle add
-        else {
-            $faculty_name = $_POST['faculty_name'] ?? '';
-            $period = $_POST['period'] ?? '';
-            $publications = $_POST['publications'] ?? '';
-            $trainings = $_POST['trainings'] ?? '';
-            $presentations = $_POST['presentations'] ?? '';
-            $kpi_score = $_POST['kpi_score'] ?? '';
-            $performance = $_POST['performance'] ?? '';
-            
-            if ($faculty_name && $period && $publications && $trainings && $presentations && $kpi_score && $performance) {
-                $db->query("INSERT INTO kpi_records (faculty_name, quarter, publications_count, presentations_count, research_projects_count, performance_score, performance_rating) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-                    [$faculty_name, $period, $publications, $trainings, $presentations, $kpi_score, $performance]);
-                $success_message = 'KPI record added successfully!';
-            } else {
-                $error_message = 'Please fill in all required fields.';
-            }
-        }
-    } catch (Exception $e) {
-        $error_message = 'Database error: ' . $e->getMessage();
+    } else {
+        $error_message = 'Invalid KPI record ID.';
     }
-    
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit;
 }
 
-// Read all entries from database
-$entries = [];
+// Handle Add New KPI Record
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_kpi'])) {
+    $faculty_name = trim($_POST['faculty_name'] ?? '');
+    $quarter = trim($_POST['quarter'] ?? '');
+    $publications_count = intval($_POST['publications_count'] ?? 0);
+    $trainings_count = intval($_POST['trainings_count'] ?? 0);
+    $presentations_count = intval($_POST['presentations_count'] ?? 0);
+    $performance_score = floatval($_POST['performance_score'] ?? 0);
+    $performance_rating = trim($_POST['performance_rating'] ?? 'Fair');
+
+    if ($faculty_name && $quarter) {
+        try {
+            $db = getDB();
+            $db->query("INSERT INTO kpi_records (faculty_name, quarter, publications_count, research_projects_count, presentations_count, performance_score, performance_rating) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+                $faculty_name, $quarter, $publications_count, $trainings_count, $presentations_count, $performance_score, $performance_rating
+            ]);
+            // Redirect to avoid resubmission on refresh
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
+    } else {
+        $error_message = 'Please fill in all required fields.';
+    }
+}
+
+// Fetch KPI records from database
+$kpi_entries = [];
 try {
     $db = getDB();
-    $entries = $db->fetchAll("SELECT * FROM kpi_records ORDER BY quarter DESC, faculty_name ASC");
+    $kpi_entries = $db->fetchAll("SELECT * FROM kpi_records ORDER BY created_at DESC");
 } catch (Exception $e) {
     $error_message = 'Failed to load KPI records: ' . $e->getMessage();
-}
-
-// Check if editing
-$edit_index = null;
-$edit_entry = null;
-if (isset($_GET['edit'])) {
-    $edit_index = (int)$_GET['edit'];
-    if (isset($entries[$edit_index])) {
-        $edit_entry = $entries[$edit_index];
-    }
 }
 ?>
 <!DOCTYPE html>
@@ -140,7 +117,7 @@ if (isset($_GET['edit'])) {
       
       <!-- Profile Menu -->
       <div class="profile-menu" id="profileMenu">
-        <button class="profile-btn" id="profileBtn">
+        <button type="button" class="profile-btn" id="profileBtn">
           <?php
             $profile_picture = $_SESSION['profile_picture'] ?? '';
             $profile_picture_path = '';
@@ -199,21 +176,51 @@ if (isset($_GET['edit'])) {
       <div class="page-header">
         <div class="page-title">
           <h1>KPI Records</h1>
-          <p>Track and manage Key Performance Indicators for research activities</p>
+          <p>Monitor faculty KPI performance and achievements</p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-secondary" id="uploadBtn">
+          <button class="btn btn-secondary" id="uploadBtn" type="button">
             <i class="fas fa-upload"></i>
             Upload Excel
           </button>
-          <button class="btn btn-primary" id="addBtn">
+          <button class="btn btn-primary" id="addBtn" type="button">
             <i class="fas fa-plus"></i>
-            Add New KPI
+            Add New KPI Record
           </button>
         </div>
       </div>
 
-      <!-- Add Entry Modal -->
+      <?php if ($success_message): ?>
+        <div class="custom-alert custom-alert-success"><?php echo htmlspecialchars($success_message); ?></div>
+      <?php endif; ?>
+      <?php if ($error_message): ?>
+        <div class="custom-alert custom-alert-danger"><?php echo htmlspecialchars($error_message); ?></div>
+      <?php endif; ?>
+<style>
+.custom-alert {
+  margin: 24px 0 16px 0;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1.5px solid transparent;
+  letter-spacing: 0.01em;
+  max-width: 100%;
+}
+.custom-alert-success {
+  background: #173c32;
+  color: #2ee59d;
+  border-color: #2ee59d;
+}
+.custom-alert-danger {
+  background: #3c1717;
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+</style>
+
+      <!-- Add KPI Modal -->
       <div class="modal" id="addModal">
         <div class="modal-content">
           <div class="modal-header">
@@ -223,34 +230,34 @@ if (isset($_GET['edit'])) {
             </button>
           </div>
           <form class="modal-form" method="post" action="">
+            <input type="hidden" name="add_kpi" value="1">
             <div class="form-group">
               <label for="faculty_name">Faculty Name</label>
               <input type="text" id="faculty_name" name="faculty_name" required placeholder="Enter faculty name">
             </div>
             <div class="form-group">
-              <label for="period">Period</label>
-              <input type="text" id="period" name="period" required placeholder="e.g., Q1 2025">
+              <label for="quarter">Period/Quarter</label>
+              <input type="text" id="quarter" name="quarter" required placeholder="e.g. Q1 2025">
             </div>
             <div class="form-group">
-              <label for="publications">Publications</label>
-              <input type="number" id="publications" name="publications" required placeholder="Enter number of publications">
+              <label for="publications_count">Publications</label>
+              <input type="number" id="publications_count" name="publications_count" min="0" value="0" required>
             </div>
             <div class="form-group">
-              <label for="trainings">Presentations</label>
-              <input type="number" id="trainings" name="trainings" required placeholder="Enter number of presentations">
+              <label for="trainings_count">Trainings</label>
+              <input type="number" id="trainings_count" name="trainings_count" min="0" value="0" required>
             </div>
             <div class="form-group">
-              <label for="presentations">Research Projects</label>
-              <input type="number" id="presentations" name="presentations" required placeholder="Enter number of research projects">
+              <label for="presentations_count">Presentations</label>
+              <input type="number" id="presentations_count" name="presentations_count" min="0" value="0" required>
             </div>
             <div class="form-group">
-              <label for="kpi_score">KPI Score</label>
-              <input type="number" id="kpi_score" name="kpi_score" required placeholder="Enter KPI score">
+              <label for="performance_score">KPI Score</label>
+              <input type="number" step="0.01" id="performance_score" name="performance_score" min="0" value="0" required>
             </div>
             <div class="form-group">
-              <label for="performance">Performance Rating</label>
-              <select id="performance" name="performance" required>
-                <option value="">Select performance rating</option>
+              <label for="performance_rating">Performance</label>
+              <select id="performance_rating" name="performance_rating" required>
                 <option value="Poor">Poor</option>
                 <option value="Fair">Fair</option>
                 <option value="Good">Good</option>
@@ -261,62 +268,7 @@ if (isset($_GET['edit'])) {
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
-              <button type="submit" class="btn btn-primary">Add KPI</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- Edit Entry Modal -->
-      <div class="modal" id="editModal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Edit KPI Record</h3>
-            <button class="modal-close" id="closeEditModal">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <form class="modal-form" method="post" action="" id="editForm">
-            <input type="hidden" name="save_edit" value="1">
-            <input type="hidden" name="id" id="editId">
-            <div class="form-group">
-              <label for="editFacultyName">Faculty Name</label>
-              <input type="text" id="editFacultyName" name="faculty_name" required>
-            </div>
-            <div class="form-group">
-              <label for="editPeriod">Period</label>
-              <input type="text" id="editPeriod" name="period" required>
-            </div>
-            <div class="form-group">
-              <label for="editPublications">Publications</label>
-              <input type="number" id="editPublications" name="publications" required>
-            </div>
-            <div class="form-group">
-              <label for="editTrainings">Presentations</label>
-              <input type="number" id="editTrainings" name="trainings" required>
-            </div>
-            <div class="form-group">
-              <label for="editPresentations">Research Projects</label>
-              <input type="number" id="editPresentations" name="presentations" required>
-            </div>
-            <div class="form-group">
-              <label for="editKpiScore">KPI Score</label>
-              <input type="number" id="editKpiScore" name="kpi_score" required>
-            </div>
-            <div class="form-group">
-              <label for="editPerformance">Performance Rating</label>
-              <select id="editPerformance" name="performance" required>
-                <option value="Poor">Poor</option>
-                <option value="Fair">Fair</option>
-                <option value="Good">Good</option>
-                <option value="Very Good">Very Good</option>
-                <option value="Excellent">Excellent</option>
-                <option value="Outstanding">Outstanding</option>
-              </select>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <button type="submit" class="btn btn-primary">Add KPI Record</button>
             </div>
           </form>
         </div>
@@ -338,17 +290,16 @@ if (isset($_GET['edit'])) {
                 <li>Upload an Excel file (.xls, .xlsx) or CSV file</li>
                 <li>File should contain these columns (in any order):</li>
                 <ul>
-                  <li><b>Faculty Name</b> (or Name, Researcher Name) - <strong>Required</strong></li>
-                  <li><b>Period</b> (or Quarter, Time Period) - <strong>Required</strong></li>
-                  <li><b>Publications</b> (or Publications Count, Number of Publications) - <strong>Required</strong></li>
-                  <li><b>Presentations</b> (or Presentations Count, Number of Presentations) - <strong>Required</strong></li>
-                  <li><b>Research Projects</b> (or Research Projects Count, Projects Count) - <strong>Required</strong></li>
-                  <li><b>KPI Score</b> (or Performance Score, Score) - <strong>Required</strong></li>
-                  <li><b>Performance Rating</b> (or Rating, Performance Level) - <em>Optional (default: "Good")</em></li>
+                  <li><b>Faculty Name</b></li>
+                  <li><b>Period</b> (e.g. Q1 2025)</li>
+                  <li><b>Publications</b></li>
+                  <li><b>Trainings</b></li>
+                  <li><b>Presentations</b></li>
+                  <li><b>KPI Score</b></li>
+                  <li><b>Performance Rating</b></li>
                 </ul>
                 <li>First row should contain column headers</li>
                 <li>Maximum file size: 5MB</li>
-                <li><strong>Note:</strong> The system will automatically map common column name variations</li>
               </ul>
               <div class="template-download-simple">
                 <a href="download_template_kpi_records.php" class="template-link" download>Download Template</a>
@@ -374,510 +325,94 @@ if (isset($_GET['edit'])) {
         </div>
       </div>
 
-      <!-- Data Table -->
+      <!-- Data Table Card -->
       <div class="data-card">
         <div class="card-header">
           <div class="card-title">
             <i class="fas fa-bullseye"></i>
-            <h2>KPI Records Overview</h2>
+            <h2>KPI Performance Overview</h2>
           </div>
           <div class="search-container">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search KPIs..." id="searchInput">
+            <input type="text" class="search-input" placeholder="Search KPI records..." id="searchInput">
           </div>
         </div>
-        
         <div class="table-container">
-          <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected KPI records?');">
-            <div class="bulk-delete-bar">
-              <div class="select-all-container">
-                <input type="checkbox" id="selectAll" class="styled-checkbox">
-                <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
-              </div>
-              <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
-            </div>
-            <table class="data-table" id="kpiTable">
-              <thead>
-                <tr>
-                  <th style="width:32px;"></th>
-                  <th>Faculty Name</th>
-                  <th>Period</th>
-                  <th>Publications</th>
-                  <th>Presentations</th>
-                  <th>Research Projects</th>
-                  <th>KPI Score</th>
-                  <th>Performance</th>
-                  <th>Actions</th>
+          <table class="data-table" id="kpiTable">
+            <thead>
+              <tr>
+                <th>Faculty Name</th>
+                <th>Period</th>
+                <th>Publications</th>
+                <th>Trainings</th>
+                <th>Presentations</th>
+                <th>KPI Score</th>
+                <th>Performance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php if (empty($kpi_entries)): ?>
+                <tr class="empty-state">
+                  <td colspan="8" style="text-align:center;">No KPI records found.</td>
                 </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($entries)): ?>
-                  <tr class="empty-state">
-                    <td colspan="9">
-                      <div class="empty-content">
-                        <i class="fas fa-bullseye"></i>
-                        <h3>No KPI records found</h3>
-                        <p>Add your first KPI record to get started</p>
-                        <button class="btn btn-primary" id="addFirstBtn">
-                          <i class="fas fa-plus"></i>
-                          Add KPI
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                <?php else: ?>
-                  <?php foreach ($entries as $i => $entry): ?>
-                  <tr data-id="<?php echo $entry['id']; ?>">
-                    <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
-                    <td data-label="Faculty Name">
-                      <div class="kpi-name">
-                        <strong><?php echo htmlspecialchars($entry['faculty_name']); ?></strong>
-                      </div>
-                    </td>
-                    <td data-label="Period">
-                      <span class="period-info"><?php echo htmlspecialchars($entry['quarter']); ?></span>
-                    </td>
-                    <td data-label="Publications">
-                      <span class="target-value"><?php echo htmlspecialchars($entry['publications_count']); ?></span>
-                    </td>
-                    <td data-label="Trainings">
-                      <span class="actual-value"><?php echo htmlspecialchars($entry['presentations_count']); ?></span>
-                    </td>
-                    <td data-label="Presentations">
-                      <?php echo htmlspecialchars($entry['research_projects_count']); ?>
-                    </td>
-                    <td data-label="KPI Score">
-                      <?php echo htmlspecialchars($entry['performance_score']); ?>
-                    </td>
-                    <td data-label="Performance">
-                      <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['performance_rating'])); ?>">
-                        <?php echo htmlspecialchars($entry['performance_rating']); ?>
-                      </span>
-                    </td>
-                    <td data-label="Actions">
+              <?php else: ?>
+                <?php foreach ($kpi_entries as $entry): ?>
+                  <tr>
+                    <td><?php echo htmlspecialchars($entry['faculty_name']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['quarter']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['publications_count']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['research_projects_count']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['presentations_count']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['performance_score']); ?></td>
+                    <td><?php echo htmlspecialchars($entry['performance_rating']); ?></td>
+                    <td>
                       <div class="action-buttons">
-                        <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
-                                data-faculty-name="<?php echo htmlspecialchars($entry['faculty_name']); ?>"
-                                data-period="<?php echo htmlspecialchars($entry['quarter']); ?>"
-                                data-publications="<?php echo htmlspecialchars($entry['publications_count']); ?>"
-                                data-trainings="<?php echo htmlspecialchars($entry['presentations_count']); ?>"
-                                data-presentations="<?php echo htmlspecialchars($entry['research_projects_count']); ?>"
-                                data-kpi-score="<?php echo htmlspecialchars($entry['performance_score']); ?>"
-                                data-performance="<?php echo htmlspecialchars($entry['performance_rating']); ?>">
-                          <i class="fas fa-edit"></i>
-                        </button>
-                        <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this KPI record?');">
-                          <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
-                          <button type="submit" name="delete" class="action-btn delete-btn">
-                            <i class="fas fa-trash"></i>
-                          </button>
+                        <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+                        <form method="post" action="" style="display:inline;">
+                          <input type="hidden" name="delete_kpi_id" value="<?php echo $entry['id']; ?>">
+                          <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this KPI record?');"><i class="fas fa-trash"></i></button>
                         </form>
                       </div>
                     </td>
                   </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
-          </form>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </main>
 
-  <style>
-    .kpi-name strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-    
-    .period-info {
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
-    
-    .target-value,
-    .actual-value {
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-    
-    .status-excellent {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .status-good {
-      background: #fef3c7;
-      color: #92400e;
-    }
-    .status-outstanding {
-      background: #c7d2fe;
-      color: #1e40af;
-    }
-    /* Hide checkboxes by default */
-    .data-table .styled-checkbox {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    .data-table tr:hover .styled-checkbox,
-    .data-table tr:focus-within .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .data-table .styled-checkbox:checked {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    #bulkDeleteForm.show-all-checkboxes .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Hide select-all container by default */
-    #bulkDeleteForm .select-all-container {
-      display: none;
-    }
-    #bulkDeleteForm.show-all-checkboxes .select-all-container {
-      display: flex !important;
-      align-items: center;
-    }
-
-    /* Hide bulk delete button by default */
-    #bulkDeleteBtn {
-      display: none;
-    }
-    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
-      display: inline-block;
-    }
-
-    /* Custom styled checkbox */
-    .styled-checkbox {
-      appearance: none;
-      -webkit-appearance: none;
-      background-color: #232e3e;
-      border: 2px solid #4285f4;
-      border-radius: 6px;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      display: inline-block;
-      vertical-align: middle;
-      position: relative;
-    }
-    .styled-checkbox:focus {
-      box-shadow: 0 0 0 2px #4285f455;
-      border-color: #4285f4;
-    }
-    .styled-checkbox:checked {
-      background-color: #4285f4;
-      border-color: #4285f4;
-    }
-    .styled-checkbox:checked::after {
-      content: '';
-      display: block;
-      position: absolute;
-      left: 6px;
-      top: 2px;
-      width: 8px;
-      height: 14px;
-      border: solid #fff;
-      border-width: 0 3px 3px 0;
-      border-radius: 1px;
-      transform: rotate(45deg);
-      box-sizing: border-box;
-    }
-
-    /* Simplified Upload Modal */
-    .upload-modal-simple {
-      max-width: 400px;
-      min-width: 0;
-      width: 100%;
-      padding: 0;
-      background: var(--bg-modal);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-    }
-
-    .upload-simple-instructions {
-      margin-bottom: 1.5rem;
-      padding: 1rem;
-      background: var(--bg-secondary);
-      border-radius: 8px;
-      border-left: 4px solid var(--primary-color);
-    }
-
-    .upload-simple-instructions p {
-      margin: 0 0 0.75rem 0;
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .upload-simple-instructions ul {
-      margin: 0;
-      padding-left: 1.25rem;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      line-height: 1.5;
-    }
-
-    .upload-simple-instructions ul ul {
-      margin-top: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .upload-simple-instructions li {
-      margin-bottom: 0.25rem;
-    }
-
-    .template-download-simple {
-      margin-top: 1rem;
-      text-align: center;
-    }
-
-    .template-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: var(--primary-color);
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: background-color 0.2s;
-    }
-
-    .template-link:hover {
-      background: var(--primary-hover);
-      color: white;
-    }
-
-    .upload-form-simple {
-      padding: 1rem;
-    }
-
-    .file-label-simple {
-      display: block;
-      width: 100%;
-      padding: 1rem;
-      border: 2px dashed var(--border-color);
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .file-label-simple:hover {
-      border-color: var(--primary-color);
-      background: var(--bg-secondary);
-    }
-
-    .file-label-simple input[type="file"] {
-      display: none;
-    }
-
-    .file-info {
-      margin-top: 0.75rem;
-      padding: 0.75rem;
-      background: var(--bg-secondary);
-      border-radius: 6px;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      display: none;
-    }
-
-    .file-info.show {
-      display: block;
-    }
-
-    .upload-progress {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: var(--bg-secondary);
-      border-radius: 8px;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: var(--border-color);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--primary-color);
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    .progress-text {
-      text-align: center;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    .upload-result {
-      margin-top: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-    }
-
-    .upload-result.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-
-    .upload-result.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-
-    .modal-footer.simple-footer {
-      padding: 1rem;
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      gap: 0.75rem;
-      justify-content: flex-end;
-    }
-  </style>
-
-  <script src="../js/theme.js"></script>
   <script>
-    // Profile menu toggle
-    const profileMenu = document.getElementById('profileMenu');
-    const profileBtn = document.getElementById('profileBtn');
-    const profileDropdown = document.getElementById('profileDropdown');
-
-    profileBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      profileMenu.classList.toggle('open');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!profileMenu.contains(e.target)) {
-        profileMenu.classList.remove('open');
-      }
-    });
-
-    // Modal functionality
+    // Modal functionality for Add KPI
     const addModal = document.getElementById('addModal');
-    const editModal = document.getElementById('editModal');
-    const uploadModal = document.getElementById('uploadModal');
     const addBtn = document.getElementById('addBtn');
-    const addFirstBtn = document.getElementById('addFirstBtn');
     const closeAddModal = document.getElementById('closeAddModal');
-    const closeEditModal = document.getElementById('closeEditModal');
-    const closeUploadModal = document.getElementById('closeUploadModal');
     const cancelAdd = document.getElementById('cancelAdd');
-    const cancelEdit = document.getElementById('cancelEdit');
-    const cancelUpload = document.getElementById('cancelUpload');
 
     function openModal(modal) {
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
-
     function closeModal(modal) {
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
     }
-
     addBtn.addEventListener('click', () => openModal(addModal));
-    if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
     closeAddModal.addEventListener('click', () => closeModal(addModal));
     cancelAdd.addEventListener('click', () => closeModal(addModal));
-    closeEditModal.addEventListener('click', () => closeModal(editModal));
-    cancelEdit.addEventListener('click', () => closeModal(editModal));
-    closeUploadModal.addEventListener('click', () => closeModal(uploadModal));
-    cancelUpload.addEventListener('click', () => closeModal(uploadModal));
-
-    // Close modal when clicking outside
-    [addModal, editModal, uploadModal].forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          closeModal(modal);
-        }
-      });
+    addModal.addEventListener('click', (e) => {
+      if (e.target === addModal) closeModal(addModal);
     });
 
-    // Edit functionality
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('.edit-btn')) {
-        const btn = e.target.closest('.edit-btn');
-        const id = btn.dataset.id;
-        const facultyName = btn.dataset.facultyName;
-        const period = btn.dataset.period;
-        const publications = btn.dataset.publications;
-        const trainings = btn.dataset.trainings;
-        const presentations = btn.dataset.presentations;
-        const kpiScore = btn.dataset.kpiScore;
-        const performance = btn.dataset.performance;
-
-        document.getElementById('editId').value = id;
-        document.getElementById('editFacultyName').value = facultyName;
-        document.getElementById('editPeriod').value = period;
-        document.getElementById('editPublications').value = publications;
-        document.getElementById('editTrainings').value = trainings;
-        document.getElementById('editPresentations').value = presentations;
-        document.getElementById('editKpiScore').value = kpiScore;
-        document.getElementById('editPerformance').value = performance;
-
-        openModal(editModal);
-      }
-    });
-
-    // Dark mode toggle functionality
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = themeToggle.querySelector('i');
-    const themeText = themeToggle.querySelector('span');
-    
-    // Check current theme
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    if (currentTheme === 'dark') {
-      document.body.classList.add('dark-theme');
-      themeIcon.className = 'fas fa-sun';
-      themeText.textContent = 'Light Mode';
-    }
-    
-    themeToggle.addEventListener('click', () => {
-      const isDark = document.body.classList.contains('dark-theme');
-      
-      if (isDark) {
-        document.body.classList.remove('dark-theme');
-        localStorage.setItem('theme', 'light');
-        themeIcon.className = 'fas fa-moon';
-        themeText.textContent = 'Dark Mode';
-      } else {
-        document.body.classList.add('dark-theme');
-        localStorage.setItem('theme', 'dark');
-        themeIcon.className = 'fas fa-sun';
-        themeText.textContent = 'Light Mode';
-      }
-    });
-
-    // Search functionality
+    // Search functionality for KPI table
     const searchInput = document.getElementById('searchInput');
     const tableRows = document.querySelectorAll('#kpiTable tbody tr');
-
     searchInput.addEventListener('input', (e) => {
       const searchTerm = e.target.value.toLowerCase();
-      
       tableRows.forEach(row => {
-        if (row.classList.contains('empty-state')) return;
-        
         const text = row.textContent.toLowerCase();
         if (text.includes(searchTerm)) {
           row.style.display = '';
@@ -886,238 +421,136 @@ if (isset($_GET['edit'])) {
         }
       });
     });
-
-    // Upload functionality
-    const uploadBtn = document.getElementById('uploadBtn');
-    const uploadForm = document.getElementById('uploadForm');
-    const excelFileInput = document.getElementById('excelFile');
-    const fileInfo = document.getElementById('fileInfo');
-    const uploadProgress = document.getElementById('uploadProgress');
-    const uploadResult = document.getElementById('uploadResult');
-    const submitUpload = document.getElementById('submitUpload');
-
-    // Debug logging
-    console.log('Upload elements found:', {
-      uploadBtn: !!uploadBtn,
-      uploadForm: !!uploadForm,
-      excelFileInput: !!excelFileInput,
-      fileInfo: !!fileInfo,
-      uploadProgress: !!uploadProgress,
-      uploadResult: !!uploadResult,
-      submitUpload: !!submitUpload,
-      uploadModal: !!uploadModal
-    });
-
-    if (uploadBtn) {
-      uploadBtn.addEventListener('click', () => {
-        console.log('Upload button clicked');
-        openModal(uploadModal);
-      });
-    } else {
-      console.error('Upload button not found');
-    }
-
-    // File selection handling
-    if (excelFileInput) {
-      excelFileInput.addEventListener('change', (e) => {
-        console.log('File selected:', e.target.files[0]);
-        const file = e.target.files[0];
-        if (file) {
-          const fileSize = (file.size / 1024 / 1024).toFixed(2);
-          fileInfo.innerHTML = `
-            <strong>Selected file:</strong> ${file.name}<br>
-            <strong>Size:</strong> ${fileSize} MB<br>
-            <strong>Type:</strong> ${file.type || 'Unknown'}
-          `;
-          fileInfo.classList.add('show');
-          submitUpload.disabled = false;
-          console.log('File info updated, submit button enabled');
-        } else {
-          fileInfo.classList.remove('show');
-          submitUpload.disabled = true;
-          console.log('No file selected, submit button disabled');
-        }
-      });
-    } else {
-      console.error('Excel file input not found');
-    }
-
-    // Upload form submission
-    if (submitUpload) {
-      submitUpload.addEventListener('click', async () => {
-        console.log('Submit upload clicked');
-        const formData = new FormData(uploadForm);
-        const file = excelFileInput.files[0];
-        
-        console.log('File to upload:', file);
-        
-        if (!file) {
-          alert('Please select a file first.');
-          return;
-        }
-
-      // Show progress
-      uploadProgress.style.display = 'block';
-      uploadResult.style.display = 'none';
-      submitUpload.disabled = true;
-      
-      try {
-        console.log('Sending fetch request to upload_excel_kpi_records.php');
-        const response = await fetch('upload_excel_kpi_records.php', {
-          method: 'POST',
-          body: formData
-        });
-        
-        console.log('Response received:', response);
-        const result = await response.json();
-        console.log('Result:', result);
-        
-        // Hide progress
-        uploadProgress.style.display = 'none';
-        
-        // Show result
-        uploadResult.style.display = 'block';
-        uploadResult.className = `upload-result ${result.success ? 'success' : 'error'}`;
-        
-        let errorDetails = '';
-        if (result.data) {
-          if (result.data.errors && result.data.errors.length > 0) {
-            errorDetails += '<br><br><strong>Row Errors:</strong><br>' + result.data.errors.join('<br>');
-          }
-          if (result.data.found_headers) {
-            errorDetails += '<br><br><strong>Found Headers:</strong><br>' + result.data.found_headers.join(', ');
-          }
-          if (result.data.matched_columns) {
-            errorDetails += '<br><br><strong>Matched Columns:</strong><br>' + result.data.matched_columns.join(', ');
-          }
-          if (result.data.missing_columns) {
-            errorDetails += '<br><br><strong>Missing Required Columns:</strong><br>' + result.data.missing_columns.join(', ');
-          }
-          if (result.data.unmatched_headers) {
-            errorDetails += '<br><br><strong>Unmatched Headers:</strong><br>' + result.data.unmatched_headers.join(', ');
-          }
-          if (result.data.missing_optional_columns && result.data.missing_optional_columns.length > 0) {
-            errorDetails += '<br><br><strong>Missing Optional Columns (defaults applied):</strong><br>' + result.data.missing_optional_columns.join(', ');
-          }
-        }
-        
-        uploadResult.innerHTML = `
-          <strong>${result.success ? 'Success!' : 'Error:'}</strong><br>
-          ${result.message}
-          ${errorDetails}
-        `;
-        
-        if (result.success) {
-          // Reset form
-          uploadForm.reset();
-          fileInfo.classList.remove('show');
-          submitUpload.disabled = true;
-          
-          // Reload page after 2 seconds to show new data
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Upload error:', error);
-        uploadProgress.style.display = 'none';
-        uploadResult.style.display = 'block';
-        uploadResult.className = 'upload-result error';
-        uploadResult.innerHTML = `
-          <strong>Error:</strong><br>
-          Failed to upload file. Please try again.<br>
-          Error details: ${error.message}
-        `;
-        submitUpload.disabled = false;
-      }
-    } else {
-      console.error('Submit upload button not found');
-    }
-
-    // Reset upload form when modal is closed
-    if (closeUploadModal) {
-      closeUploadModal.addEventListener('click', () => {
-        console.log('Close upload modal clicked');
-        closeModal(uploadModal);
-        uploadForm.reset();
-        fileInfo.classList.remove('show');
-        uploadProgress.style.display = 'none';
-        uploadResult.style.display = 'none';
-        submitUpload.disabled = true;
-      });
-    } else {
-      console.error('Close upload modal button not found');
-    }
-
-    if (cancelUpload) {
-      cancelUpload.addEventListener('click', () => {
-        console.log('Cancel upload clicked');
-        closeModal(uploadModal);
-        uploadForm.reset();
-        fileInfo.classList.remove('show');
-        uploadProgress.style.display = 'none';
-        uploadResult.style.display = 'none';
-        submitUpload.disabled = true;
-      });
-    } else {
-      console.error('Cancel upload button not found');
-    }
-
-    if (uploadModal) {
-      uploadModal.addEventListener('click', (e) => {
-        if (e.target === uploadModal) {
-          console.log('Upload modal background clicked');
-          closeModal(uploadModal);
-          uploadForm.reset();
-          fileInfo.classList.remove('show');
-          uploadProgress.style.display = 'none';
-          uploadResult.style.display = 'none';
-          submitUpload.disabled = true;
-        }
-      });
-    } else {
-      console.error('Upload modal not found');
-    }
-
-    // Bulk delete button enable/disable and show-all-checkboxes logic
-    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-    function updateBulkDeleteBtn() {
-      let checkedCount = 0;
-      rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
-      if (checkedCount > 0) {
-        bulkDeleteBtn.disabled = false;
-        bulkDeleteForm.classList.add('show-all-checkboxes');
-      } else {
-        bulkDeleteBtn.disabled = true;
-        bulkDeleteForm.classList.remove('show-all-checkboxes');
-      }
-      // Update selectAll checkbox state
-      if (selectAll) {
-        if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
-          selectAll.checked = true;
-          selectAll.indeterminate = false;
-        } else if (checkedCount > 0) {
-          selectAll.checked = false;
-          selectAll.indeterminate = true;
-        } else {
-          selectAll.checked = false;
-          selectAll.indeterminate = false;
-        }
-      }
-    }
-    rowCheckboxes.forEach(cb => {
-      cb.addEventListener('change', updateBulkDeleteBtn);
-    });
-    if (selectAll) {
-      selectAll.addEventListener('change', function() {
-        rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
-        updateBulkDeleteBtn();
-      });
-    }
-    updateBulkDeleteBtn();
   </script>
+  <script src="../js/theme.js"></script>
+  <script>
+    // Profile menu toggle
+    const profileMenu = document.getElementById('profileMenu');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+
+    if (profileBtn && profileMenu) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileMenu.classList.toggle('open');
+      });
+    }
+    document.addEventListener('click', (e) => {
+      if (!profileMenu.contains(e.target)) {
+        profileMenu.classList.remove('open');
+      }
+    });
+  </script>
+  <script>
+// Modal functionality for Upload Excel
+const uploadModal = document.getElementById('uploadModal');
+const uploadBtn = document.getElementById('uploadBtn');
+const closeUploadModal = document.getElementById('closeUploadModal');
+const cancelUpload = document.getElementById('cancelUpload');
+
+function openModal(modal) {
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(modal) {
+  modal.style.display = 'none';
+  document.body.style.overflow = 'auto';
+}
+uploadBtn.addEventListener('click', () => openModal(uploadModal));
+closeUploadModal.addEventListener('click', () => closeModal(uploadModal));
+cancelUpload.addEventListener('click', () => closeModal(uploadModal));
+uploadModal.addEventListener('click', (e) => {
+  if (e.target === uploadModal) closeModal(uploadModal);
+});
+
+// Upload logic
+const uploadForm = document.getElementById('uploadForm');
+const excelFileInput = document.getElementById('excelFile');
+const fileInfo = document.getElementById('fileInfo');
+const uploadProgress = document.getElementById('uploadProgress');
+const uploadResult = document.getElementById('uploadResult');
+const submitUpload = document.getElementById('submitUpload');
+
+excelFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const fileSize = (file.size / 1024 / 1024).toFixed(2);
+    fileInfo.innerHTML = `<strong>Selected file:</strong> ${file.name}<br><strong>Size:</strong> ${fileSize} MB<br><strong>Type:</strong> ${file.type || 'Unknown'}`;
+    fileInfo.classList.add('show');
+    submitUpload.disabled = false;
+  } else {
+    fileInfo.classList.remove('show');
+    submitUpload.disabled = true;
+  }
+});
+
+submitUpload.addEventListener('click', async () => {
+  const formData = new FormData(uploadForm);
+  const file = excelFileInput.files[0];
+  if (!file) {
+    alert('Please select a file first.');
+    return;
+  }
+  uploadProgress.style.display = 'block';
+  uploadResult.style.display = 'none';
+  submitUpload.disabled = true;
+  try {
+    const response = await fetch('upload_excel_kpi_records.php', {
+      method: 'POST',
+      body: formData
+    });
+    const result = await response.json();
+    uploadProgress.style.display = 'none';
+    uploadResult.style.display = 'block';
+    uploadResult.className = `upload-result ${result.success ? 'success' : 'error'}`;
+    let errorDetails = '';
+    if (result.data) {
+      if (result.data.errors && result.data.errors.length > 0) {
+        errorDetails += '<br><br><strong>Row Errors:</strong><br>' + result.data.errors.join('<br>');
+      }
+    }
+    uploadResult.innerHTML = `<strong>${result.success ? 'Success!' : 'Error:'}</strong><br>${result.message}${errorDetails}`;
+    if (result.success) {
+      uploadForm.reset();
+      fileInfo.classList.remove('show');
+      submitUpload.disabled = true;
+      setTimeout(() => { window.location.reload(); }, 2000);
+    }
+  } catch (error) {
+    uploadProgress.style.display = 'none';
+    uploadResult.style.display = 'block';
+    uploadResult.className = 'upload-result error';
+    uploadResult.innerHTML = `<strong>Error:</strong><br>Failed to upload file. Please try again.`;
+    submitUpload.disabled = false;
+  }
+});
+// Reset upload form when modal is closed
+closeUploadModal.addEventListener('click', () => {
+  closeModal(uploadModal);
+  uploadForm.reset();
+  fileInfo.classList.remove('show');
+  uploadProgress.style.display = 'none';
+  uploadResult.style.display = 'none';
+  submitUpload.disabled = true;
+});
+cancelUpload.addEventListener('click', () => {
+  closeModal(uploadModal);
+  uploadForm.reset();
+  fileInfo.classList.remove('show');
+  uploadProgress.style.display = 'none';
+  uploadResult.style.display = 'none';
+  submitUpload.disabled = true;
+});
+uploadModal.addEventListener('click', (e) => {
+  if (e.target === uploadModal) {
+    closeModal(uploadModal);
+    uploadForm.reset();
+    fileInfo.classList.remove('show');
+    uploadProgress.style.display = 'none';
+    uploadResult.style.display = 'none';
+    submitUpload.disabled = true;
+  }
+});
+</script>
 </body>
 </html> 

@@ -21,7 +21,7 @@ $output = fopen('php://output', 'w');
 // Don't add BOM - it causes parsing issues
 // fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-// Write headers
+// Write headers with correct column names
 $headers = [
     'Faculty Name',
     'Period',

@@ -444,7 +444,7 @@ if (isset($_GET['edit'])) {
             <input type="text" class="search-input" placeholder="Search tools..." id="searchInput">
           </div>
         </div>
-        <form id="bulkDeleteForm" method="post" action="" onsubmit="return confirm('Are you sure you want to delete the selected entries?');">
+        <form id="bulkDeleteForm" method="post" action="">
           <div class="bulk-delete-bar">
             <div class="select-all-container">
               <input type="checkbox" id="selectAll" class="styled-checkbox">
@@ -1141,6 +1141,27 @@ if (isset($_GET['edit'])) {
       });
     }
     updateBulkDeleteBtn();
+
+    // Bulk delete form submit handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+      if (bulkDeleteForm) {
+        bulkDeleteForm.addEventListener('submit', function(e) {
+          const checkboxes = bulkDeleteForm.querySelectorAll('.row-checkbox:checked');
+          if (checkboxes.length === 0) {
+            // Prevent form submission if nothing is selected
+            e.preventDefault();
+            return false;
+          }
+          // Show confirmation only if at least one is checked
+          if (!confirm('Are you sure you want to delete the selected entries?')) {
+            e.preventDefault();
+            return false;
+          }
+          // Otherwise, allow form to submit
+        });
+      }
+    });
   </script>
 </body>
 </html> 
