@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 // Include database configuration
@@ -100,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         // Map header names to their column index (case-insensitive)
         $header_map = [];
         foreach ($first_row as $idx => $header) {
-            $header = trim($header, " \t\n\r\0\x0B\""); // Strip spaces and quotes
+            $header = trim($header, " \t\n\r\0\x0B\"'"); // Strip spaces and both single/double quotes
             $header_clean = strtolower(str_replace([' ', '_', '/'], '', $header));
             $header_map[$header_clean] = $idx;
         }
@@ -173,11 +177,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
             
             try {
                 $db->query(
-                    "INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)\n"
+                    . "ON DUPLICATE KEY UPDATE title = VALUES(title), department = VALUES(department), status = VALUES(status), action_taken = VALUES(action_taken)",
                     [$protocol_number, $title, $department, $status_clean, $action_taken]
                 );
                 $success_count++;
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $error_count++;
                 $errors[] = "Row " . ($i + 2) . ": " . $e->getMessage();
             }
@@ -195,8 +200,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
         $response['data'] = ['errors' => $errors];
         echo json_encode($response);
         exit;
-    } catch (Exception $e) {
-        $response['message'] = 'Database error: ' . $e->getMessage();
+    } catch (Throwable $e) {
+        $response = [
+            'success' => false,
+            'message' => 'Server error: ' . $e->getMessage(),
+            'data' => []
+        ];
+        header('Content-Type: application/json');
         echo json_encode($response);
         exit;
     }

@@ -17,75 +17,110 @@ if (isset($_POST['logout'])) {
 $success_message = '';
 $error_message = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Fetch the next protocol number for auto-generation
+function getNextProtocolNumber($db) {
+    $year = date('Y');
+    $prefix = 'EP-' . $year . '-';
+    $last = $db->fetch("SELECT protocol_number FROM ethics_reviewed_protocols WHERE protocol_number LIKE ? ORDER BY id DESC LIMIT 1", [$prefix.'%']);
+    if ($last && isset($last['protocol_number'])) {
+        $lastNum = intval(substr($last['protocol_number'], strlen($prefix)));
+        $nextNum = $lastNum + 1;
+    } else {
+        $nextNum = 1;
+    }
+    return $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+}
+
+// Always set $next_protocol_no before any HTML output
+$next_protocol_no = '';
+try {
+    $db = getDB();
+    $next_protocol_no = getNextProtocolNumber($db);
+} catch (Exception $e) {
+    $next_protocol_no = '';
+}
+
+// Handle Add Entry form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_protocol'])) {
+    $protocol_no = $_POST['protocol_no'] ?? '';
+    $title = $_POST['title'] ?? '';
+    $department = $_POST['department'] ?? '';
+    $status = $_POST['status'] ?? '';
+    $action_taken = $_POST['action_taken'] ?? '';
+    if ($protocol_no && $title && $department && $status && $action_taken) {
+        try {
+            $db = getDB();
+            $db->query("INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)",
+                [$protocol_no, $title, $department, $status, $action_taken]);
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        } catch (Exception $e) {
+            if (strpos($e->getMessage(), '1062') !== false) {
+                $error_message = 'A protocol with this Protocol Number already exists.';
+            } else {
+                $error_message = 'Database error: ' . $e->getMessage();
+            }
+        }
+    } else {
+        $error_message = 'Please fill in all required fields.';
+    }
+}
+// Handle Edit form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_edit']) && isset($_POST['id'])) {
+    $id = (int)$_POST['id'];
+    $title = $_POST['title'] ?? '';
+    $department = $_POST['department'] ?? '';
+    $status = $_POST['status'] ?? '';
+    $action_taken = $_POST['action_taken'] ?? '';
+    if ($title && $department && $status && $action_taken) {
+        try {
+            $db = getDB();
+            $db->query("UPDATE ethics_reviewed_protocols SET title = ?, department = ?, status = ?, action_taken = ? WHERE id = ?",
+                [$title, $department, $status, $action_taken, $id]);
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
+    } else {
+        $error_message = 'Please fill in all required fields.';
+    }
+}
+// Handle Delete form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_POST['id'])) {
+    $id = (int)$_POST['id'];
     try {
         $db = getDB();
-        
-        // Handle delete
-        if (isset($_POST['delete']) && isset($_POST['id'])) {
-            $id = (int)$_POST['id'];
-            $db->query("DELETE FROM ethics_reviewed_protocols WHERE id = ?", [$id]);
-            $success_message = 'Protocol deleted successfully!';
-        }
-        // Handle edit save
-        elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {
-            $id = (int)$_POST['id'];
-            $no = $_POST['no'] ?? '';
-            $title = $_POST['title'] ?? '';
-            $department = $_POST['department'] ?? '';
-            $status = $_POST['status'] ?? '';
-            $action = $_POST['action'] ?? '';
-            
-            if ($no && $title && $department && $status && $action) {
-                $db->query("UPDATE ethics_reviewed_protocols SET protocol_number = ?, title = ?, department = ?, status = ?, action_taken = ? WHERE id = ?", 
-                    [$no, $title, $department, $status, $action, $id]);
-                $success_message = 'Protocol updated successfully!';
-            } else {
-                $error_message = 'Please fill in all required fields.';
-            }
-        }
-        // Handle add
-        else {
-            $no = $_POST['no'] ?? '';
-            $title = $_POST['title'] ?? '';
-            $department = $_POST['department'] ?? '';
-            $status = $_POST['status'] ?? '';
-            $action = $_POST['action'] ?? '';
-            
-            if ($no && $title && $department && $status && $action) {
-                $db->query("INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)", 
-                    [$no, $title, $department, $status, $action]);
-                $success_message = 'Protocol added successfully!';
-            } else {
-                $error_message = 'Please fill in all required fields.';
-            }
-        }
+        $db->query("DELETE FROM ethics_reviewed_protocols WHERE id = ?", [$id]);
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
     } catch (Exception $e) {
         $error_message = 'Database error: ' . $e->getMessage();
     }
-    
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit;
+}
+// Handle Bulk Delete form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && !empty($_POST['selected_ids']) && is_array($_POST['selected_ids'])) {
+    $ids = array_map('intval', $_POST['selected_ids']);
+    if (!empty($ids)) {
+        try {
+            $db = getDB();
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $db->query("DELETE FROM ethics_reviewed_protocols WHERE id IN ($placeholders)", $ids);
+            header('Location: ' . $_SERVER['PHP_SELF']);
+            exit;
+        } catch (Exception $e) {
+            $error_message = 'Database error: ' . $e->getMessage();
+        }
+    }
 }
 
-// Read all entries from database
+// Fetch all entries from the database
 $entries = [];
 try {
     $db = getDB();
-    $entries = $db->fetchAll("SELECT * FROM ethics_reviewed_protocols ORDER BY protocol_number DESC");
+    $entries = $db->fetchAll("SELECT * FROM ethics_reviewed_protocols ORDER BY id DESC");
 } catch (Exception $e) {
     $error_message = 'Failed to load protocols: ' . $e->getMessage();
-}
-
-// Check if editing
-$edit_index = null;
-$edit_entry = null;
-if (isset($_GET['edit'])) {
-    $edit_index = (int)$_GET['edit'];
-    if (isset($entries[$edit_index])) {
-        $edit_entry = $entries[$edit_index];
-    }
 }
 ?>
 <!DOCTYPE html>
@@ -100,27 +135,37 @@ if (isset($_GET['edit'])) {
   <link rel="stylesheet" href="../css/theme.css">
   <link rel="stylesheet" href="../css/modern-theme.css">
   <style>
-    /* Hide checkboxes by default */
-    .data-table .styled-checkbox {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
+    .status-badge {
+      display: inline-block;
+      padding: 0.3em 1.2em;
+      border-radius: 999px;
+      font-size: 1em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: #eee;
+      color: #222;
     }
-    .data-table tr:hover .styled-checkbox,
-    .data-table tr:focus-within .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
+    .status-pending {
+      background: #ffc72c;
+      color: #222;
     }
-    .data-table .styled-checkbox:checked {
-      opacity: 1;
-      pointer-events: auto;
+    .status-approved {
+      background: #2ecc40;
+      color: #fff;
     }
-    #bulkDeleteForm.show-all-checkboxes .styled-checkbox {
-      opacity: 1;
-      pointer-events: auto;
+    .status-rejected {
+      background: #e74c3c;
+      color: #fff;
     }
-
-    /* Hide select-all container by default */
+    .status-under-review {
+      background: #3498db;
+      color: #fff;
+    }
+    .status-completed {
+      background: #2ee9a6;
+      color: #222;
+    }
     #bulkDeleteForm .select-all-container {
       display: none;
     }
@@ -128,209 +173,38 @@ if (isset($_GET['edit'])) {
       display: flex !important;
       align-items: center;
     }
-
-    /* Hide bulk delete button by default */
     #bulkDeleteBtn {
       display: none;
     }
     #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
       display: inline-block;
     }
-
-    /* Upload Progress Styles */
-    .upload-progress {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      text-align: center;
+    /* Hide checkboxes by default */
+    .data-table .styled-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
     }
-    
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: var(--bg-secondary);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
+    /* Show checkbox on row hover or focus */
+    .data-table tr:hover .styled-checkbox,
+    .data-table tr:focus-within .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
     }
-    
-    .progress-fill {
-      height: 100%;
-      background: var(--btn-primary-bg);
-      width: 0%;
-      transition: width 0.3s ease;
+    /* Show checkbox if checked */
+    .data-table .styled-checkbox:checked {
+      opacity: 1;
+      pointer-events: auto;
     }
-    
-    .progress-text {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      font-weight: 500;
+    /* Show all checkboxes if table has .show-all-checkboxes (JS toggles this for bulk select) */
+    #bulkDeleteForm.show-all-checkboxes .styled-checkbox {
+      opacity: 1;
+      pointer-events: auto;
     }
-    
-    /* Upload Result Styles */
-    .upload-result {
-      margin-top: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-    
-    .upload-result.success {
-      background: #1e4620;
-      color: #d4f8e8;
-      border: 1.5px solid #2ecc40;
-    }
-    
-    .upload-result.error {
-      background: #4d2323;
-      color: #ffd6d6;
-      border: 1.5px solid #e74c3c;
-    }
-    
-    .upload-result.info {
-      background: #2c3e50;
-      color: #ecf0f1;
-      border: 1.5px solid #34495e;
-    }
-    
-    .upload-result i {
-      font-size: 1.2em;
-      margin-top: 0.1em;
-    }
-    
-    .upload-result.success i {
-      color: #2ecc40;
-    }
-    
-    .upload-result.error i {
-      color: #e74c3c;
-    }
-
-    /* Simplified Upload Modal Styles */
-    .upload-modal-simple {
-      max-width: 400px;
-      min-width: 0;
-      width: 100%;
-      padding: 0;
-      background: var(--bg-modal);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .upload-simple-instructions {
-      padding: 1.2rem 1.2rem 0.5rem 1.2rem;
-      font-size: 1rem;
-      color: var(--text-primary);
-    }
-    
-    .upload-simple-instructions ul {
-      margin: 0.5rem 0 0.5rem 1.2rem;
-      padding-left: 1.2rem;
-      font-size: 0.97rem;
-      color: var(--text-secondary);
-    }
-    
-    .upload-simple-instructions ul ul {
-      margin: 0.2rem 0 0.2rem 1.2rem;
-      font-size: 0.95rem;
-    }
-    
-    .template-download-simple {
-      margin: 1rem 0 0.5rem 0;
-    }
-    
-    .template-link {
-      color: var(--btn-primary-bg);
-      text-decoration: underline;
-      font-size: 0.98rem;
-      font-weight: 500;
-      background: none;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-    }
-    
-    .template-link:hover {
-      text-decoration: none;
-      color: var(--btn-primary-hover);
-    }
-    
-    .upload-form-simple {
-      padding: 0 1.2rem 1.2rem 1.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.7rem;
-    }
-    
-    .file-label-simple {
-      font-weight: 500;
-      color: var(--text-primary);
-      font-size: 1rem;
-      margin-bottom: 0.2rem;
-    }
-    
-    #excelFile {
-      border: 1px solid var(--border-primary);
-      border-radius: 6px;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.97rem;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      width: 100%;
-      margin-bottom: 0.2rem;
-    }
-    
-    #excelFile:focus {
-      outline: 2px solid var(--btn-primary-bg);
-      border-color: var(--btn-primary-bg);
-    }
-    
-    .file-info {
-      margin-top: 0.2rem;
-      padding: 0.4rem 0.7rem;
-      background: var(--bg-tertiary);
-      border-radius: 4px;
-      font-size: 0.93rem;
-      color: var(--text-secondary);
-      width: 100%;
-      word-break: break-all;
-    }
-    
-    .simple-footer {
-      padding: 1rem 1.2rem 1rem 1.2rem;
-      border-top: 1px solid var(--border-color);
-      background: var(--bg-secondary);
-      border-radius: 0 0 12px 12px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-    }
-    
-    @media (max-width: 600px) {
-      .upload-modal-simple {
-        max-width: 98vw;
-        min-width: 0;
-        padding: 0;
-      }
-      .upload-simple-instructions, .upload-form-simple {
-        padding-left: 0.7rem;
-        padding-right: 0.7rem;
-      }
-      .simple-footer {
-        padding-left: 0.7rem;
-        padding-right: 0.7rem;
-      }
-    }
-
-    /* Custom styled checkbox */
     .styled-checkbox {
       appearance: none;
       -webkit-appearance: none;
-      background-color: #232e3e;
+      background: none;
       border: 2px solid #4285f4;
       border-radius: 6px;
       width: 24px;
@@ -465,17 +339,97 @@ if (isset($_GET['edit'])) {
           <p>Monitor research ethics compliance and protocol approvals</p>
         </div>
         <div class="page-actions">
+          <button class="btn btn-secondary" id="uploadExcelBtn">
+            <i class="fas fa-file-excel"></i>
+            Upload Excel
+          </button>
           <button class="btn btn-primary" id="addBtn">
             <i class="fas fa-plus"></i>
             Add New Entry
           </button>
-          <button class="btn btn-secondary" id="uploadExcelBtn" style="margin-left: 0.5em;">
-            <i class="fas fa-file-excel"></i>
-            Upload Excel
-          </button>
         </div>
       </div>
-
+      <?php if ($error_message): ?>
+        <div class="alert alert-error">
+          <i class="fas fa-exclamation-circle"></i>
+          <?php echo htmlspecialchars($error_message); ?>
+        </div>
+      <?php endif; ?>
+      <div class="data-card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-shield-alt"></i>
+            <h2>Ethics Protocols Overview</h2>
+          </div>
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search protocols..." id="searchInput">
+          </div>
+        </div>
+        <div class="table-container">
+          <form id="bulkDeleteForm" method="post" action="">
+            <div class="bulk-delete-bar">
+              <div class="select-all-container">
+                <input type="checkbox" id="selectAll" class="styled-checkbox">
+                <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
+              </div>
+              <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+            </div>
+            <table class="data-table" id="protocolsTable">
+              <thead>
+                <tr>
+                  <th style="width:32px;"></th>
+                  <th>Protocol No.</th>
+                  <th>Research Title</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                  <th>Action Taken</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (empty($entries)): ?>
+                  <tr class="empty-state">
+                    <td colspan="7" style="text-align:center; color:var(--text-secondary);">No protocols found.</td>
+                  </tr>
+                <?php else: ?>
+                  <?php foreach ($entries as $entry): ?>
+                    <tr>
+                      <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
+                      <td data-label="Protocol No."><strong><?php echo htmlspecialchars($entry['protocol_number']); ?></strong></td>
+                      <td data-label="Research Title"><div class="title-content"><h4><?php echo htmlspecialchars($entry['title']); ?></h4></div></td>
+                      <td data-label="Department"><?php echo htmlspecialchars($entry['department']); ?></td>
+                      <td data-label="Status">
+                        <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['status'])); ?>">
+                          <?php echo htmlspecialchars($entry['status']); ?>
+                        </span>
+                      </td>
+                      <td data-label="Action Taken"><?php echo htmlspecialchars($entry['action_taken']); ?></td>
+                      <td data-label="Actions">
+                        <div class="action-buttons">
+                          <button class="action-btn edit-btn"
+                            data-id="<?php echo $entry['id']; ?>"
+                            data-protocol_no="<?php echo htmlspecialchars($entry['protocol_number']); ?>"
+                            data-title="<?php echo htmlspecialchars($entry['title']); ?>"
+                            data-department="<?php echo htmlspecialchars($entry['department']); ?>"
+                            data-status="<?php echo htmlspecialchars($entry['status']); ?>"
+                            data-action_taken="<?php echo htmlspecialchars($entry['action_taken']); ?>">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <form method="post" action="" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this protocol?');">
+                            <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
+                            <button type="submit" name="delete" class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </form>
+        </div>
+      </div>
       <!-- Add Entry Modal -->
       <div class="modal" id="addModal">
         <div class="modal-content">
@@ -486,9 +440,10 @@ if (isset($_GET['edit'])) {
             </button>
           </div>
           <form class="modal-form" method="post" action="">
+            <input type="hidden" name="add_protocol" value="1">
             <div class="form-group">
-              <label for="no">Protocol Number</label>
-              <input type="text" id="no" name="no" required placeholder="e.g., EP-2025-001">
+              <label for="protocol_no">Protocol Number</label>
+              <input type="text" id="protocol_no" name="protocol_no" value="<?php echo htmlspecialchars($next_protocol_no); ?>" readonly>
             </div>
             <div class="form-group">
               <label for="title">Research Title</label>
@@ -505,11 +460,12 @@ if (isset($_GET['edit'])) {
                 <option value="Approved">Approved</option>
                 <option value="Under Review">Under Review</option>
                 <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="action">Action Taken</label>
-              <input type="text" id="action" name="action" required placeholder="Enter action taken">
+              <label for="action_taken">Action Taken</label>
+              <input type="text" id="action_taken" name="action_taken" required placeholder="Enter action taken">
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
@@ -518,7 +474,6 @@ if (isset($_GET['edit'])) {
           </form>
         </div>
       </div>
-
       <!-- Edit Entry Modal -->
       <div class="modal" id="editModal">
         <div class="modal-content">
@@ -532,8 +487,8 @@ if (isset($_GET['edit'])) {
             <input type="hidden" name="save_edit" value="1">
             <input type="hidden" name="id" id="editId">
             <div class="form-group">
-              <label for="editNo">Protocol Number</label>
-              <input type="text" id="editNo" name="no" required>
+              <label for="editProtocolNo">Protocol Number</label>
+              <input type="text" id="editProtocolNo" name="protocol_no" readonly>
             </div>
             <div class="form-group">
               <label for="editTitle">Research Title</label>
@@ -549,11 +504,12 @@ if (isset($_GET['edit'])) {
                 <option value="Approved">Approved</option>
                 <option value="Under Review">Under Review</option>
                 <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="editAction">Action Taken</label>
-              <input type="text" id="editAction" name="action" required>
+              <label for="editActionTaken">Action Taken</label>
+              <input type="text" id="editActionTaken" name="action_taken" required>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
@@ -562,7 +518,6 @@ if (isset($_GET['edit'])) {
           </form>
         </div>
       </div>
-
       <!-- Upload Excel Modal -->
       <div class="modal" id="uploadExcelModal">
         <div class="modal-content upload-modal-simple">
@@ -611,105 +566,6 @@ if (isset($_GET['edit'])) {
           </div>
         </div>
       </div>
-
-      <!-- Data Table -->
-      <div class="data-card">
-        <div class="card-header">
-          <div class="card-title">
-            <i class="fas fa-shield-alt"></i>
-            <h2>Ethics Protocols Overview</h2>
-          </div>
-          <div class="search-container">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" placeholder="Search protocols..." id="searchInput">
-          </div>
-        </div>
-        
-        <div class="table-container">
-          <form id="bulkDeleteForm" method="post" action="">
-            <div class="bulk-delete-bar">
-              <div class="select-all-container">
-                <input type="checkbox" id="selectAll" class="styled-checkbox">
-                <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
-              </div>
-              <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
-            </div>
-            <table class="data-table" id="protocolsTable">
-              <thead>
-                <tr>
-                  <th style="width:32px;"></th>
-                  <th>Protocol No.</th>
-                  <th>Research Title</th>
-                  <th>Department</th>
-                  <th>Status</th>
-                  <th>Action Taken</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($entries)): ?>
-                  <tr class="empty-state">
-                    <td colspan="7">
-                      <div class="empty-content">
-                        <i class="fas fa-inbox"></i>
-                        <h3>No protocols found</h3>
-                        <p>Add your first ethics protocol to get started</p>
-                        <button class="btn btn-primary" id="addFirstBtn">
-                          <i class="fas fa-plus"></i>
-                          Add Protocol
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                <?php else: ?>
-                  <?php foreach ($entries as $i => $entry): ?>
-                  <tr data-id="<?php echo $entry['id']; ?>">
-                    <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
-                    <td class="protocol-no">
-                      <span class="protocol-number"><?php echo htmlspecialchars($entry['protocol_number']); ?></span>
-                    </td>
-                    <td class="protocol-title">
-                      <div class="title-content">
-                        <h4><?php echo htmlspecialchars($entry['title']); ?></h4>
-                      </div>
-                    </td>
-                    <td class="protocol-department">
-                      <span class="department-name"><?php echo htmlspecialchars($entry['department']); ?></span>
-                    </td>
-                    <td class="protocol-status">
-                      <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $entry['status'])); ?>">
-                        <?php echo htmlspecialchars($entry['status']); ?>
-                      </span>
-                    </td>
-                    <td class="protocol-action">
-                      <span class="action-text"><?php echo htmlspecialchars($entry['action_taken']); ?></span>
-                    </td>
-                    <td class="protocol-actions">
-                      <div class="action-buttons">
-                        <button class="action-btn edit-btn" data-id="<?php echo $entry['id']; ?>" 
-                                data-no="<?php echo htmlspecialchars($entry['protocol_number']); ?>"
-                                data-title="<?php echo htmlspecialchars($entry['title']); ?>"
-                                data-department="<?php echo htmlspecialchars($entry['department']); ?>"
-                                data-status="<?php echo htmlspecialchars($entry['status']); ?>"
-                                data-action="<?php echo htmlspecialchars($entry['action_taken']); ?>">
-                          <i class="fas fa-edit"></i>
-                        </button>
-                        <form method="post" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this protocol?');">
-                          <input type="hidden" name="id" value="<?php echo $entry['id']; ?>">
-                          <button type="submit" name="delete" class="action-btn delete-btn">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
-          </form>
-        </div>
-      </div>
     </div>
   </main>
 
@@ -731,113 +587,62 @@ if (isset($_GET['edit'])) {
       }
     });
 
-    // Modal functionality
+    // Add Entry Modal functionality
     const addModal = document.getElementById('addModal');
-    const editModal = document.getElementById('editModal');
     const addBtn = document.getElementById('addBtn');
-    const addFirstBtn = document.getElementById('addFirstBtn');
     const closeAddModal = document.getElementById('closeAddModal');
-    const closeEditModal = document.getElementById('closeEditModal');
     const cancelAdd = document.getElementById('cancelAdd');
-    const cancelEdit = document.getElementById('cancelEdit');
 
     function openModal(modal) {
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
-
     function closeModal(modal) {
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
     }
-
     addBtn.addEventListener('click', () => openModal(addModal));
-    if (addFirstBtn) addFirstBtn.addEventListener('click', () => openModal(addModal));
     closeAddModal.addEventListener('click', () => closeModal(addModal));
-    closeEditModal.addEventListener('click', () => closeModal(editModal));
     cancelAdd.addEventListener('click', () => closeModal(addModal));
-    cancelEdit.addEventListener('click', () => closeModal(editModal));
-
-    // Close modal when clicking outside
-    [addModal, editModal].forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          closeModal(modal);
-        }
-      });
+    addModal.addEventListener('click', (e) => {
+      if (e.target === addModal) {
+        closeModal(addModal);
+      }
     });
 
-    // Edit functionality
+    // Edit Entry Modal functionality
+    const editModal = document.getElementById('editModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const cancelEdit = document.getElementById('cancelEdit');
     document.addEventListener('click', (e) => {
       if (e.target.closest('.edit-btn')) {
         const btn = e.target.closest('.edit-btn');
-        const id = btn.dataset.id;
-        const no = btn.dataset.no;
-        const title = btn.dataset.title;
-        const department = btn.dataset.department;
-        const status = btn.dataset.status;
-        const action = btn.dataset.action;
-
-        document.getElementById('editId').value = id;
-        document.getElementById('editNo').value = no;
-        document.getElementById('editTitle').value = title;
-        document.getElementById('editDepartment').value = department;
-        document.getElementById('editStatus').value = status;
-        document.getElementById('editAction').value = action;
-
-        openModal(editModal);
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editProtocolNo').value = btn.dataset.protocol_no;
+        document.getElementById('editTitle').value = btn.dataset.title;
+        document.getElementById('editDepartment').value = btn.dataset.department;
+        document.getElementById('editStatus').value = btn.dataset.status;
+        document.getElementById('editActionTaken').value = btn.dataset.action_taken;
+        editModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+    });
+    closeEditModal.addEventListener('click', () => {
+      editModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    });
+    cancelEdit.addEventListener('click', () => {
+      editModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    });
+    editModal.addEventListener('click', (e) => {
+      if (e.target === editModal) {
+        editModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
       }
     });
 
-    // Dark mode toggle functionality
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = themeToggle.querySelector('i');
-    const themeText = themeToggle.querySelector('span');
-    
-    // Check current theme
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    if (currentTheme === 'dark') {
-      document.body.classList.add('dark-theme');
-      themeIcon.className = 'fas fa-sun';
-      themeText.textContent = 'Light Mode';
-    }
-    
-    themeToggle.addEventListener('click', () => {
-      const isDark = document.body.classList.contains('dark-theme');
-      
-      if (isDark) {
-        document.body.classList.remove('dark-theme');
-        localStorage.setItem('theme', 'light');
-        themeIcon.className = 'fas fa-moon';
-        themeText.textContent = 'Dark Mode';
-      } else {
-        document.body.classList.add('dark-theme');
-        localStorage.setItem('theme', 'dark');
-        themeIcon.className = 'fas fa-sun';
-        themeText.textContent = 'Light Mode';
-      }
-    });
-
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const tableRows = document.querySelectorAll('#protocolsTable tbody tr');
-
-    searchInput.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      
-      tableRows.forEach(row => {
-        if (row.classList.contains('empty-state')) return;
-        
-        const text = row.textContent.toLowerCase();
-        if (text.includes(searchTerm)) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
-      });
-    });
-
-    // Bulk delete button enable/disable and show-all-checkboxes logic
+    // Bulk delete button enable/disable and select all logic
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
     const selectAll = document.getElementById('selectAll');
@@ -877,28 +682,7 @@ if (isset($_GET['edit'])) {
     }
     updateBulkDeleteBtn();
 
-    // Bulk delete form submit handler
-    document.addEventListener('DOMContentLoaded', function() {
-      const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-      if (bulkDeleteForm) {
-        bulkDeleteForm.addEventListener('submit', function(e) {
-          const checkboxes = bulkDeleteForm.querySelectorAll('.row-checkbox:checked');
-          if (checkboxes.length === 0) {
-            // Prevent form submission if nothing is selected
-            e.preventDefault();
-            return false;
-          }
-          // Show confirmation only if at least one is checked
-          if (!confirm('Are you sure you want to delete the selected protocols?')) {
-            e.preventDefault();
-            return false;
-          }
-          // Otherwise, allow form to submit
-        });
-      }
-    });
-
-    // Upload functionality
+    // Upload Excel Modal functionality
     const uploadExcelBtn = document.getElementById('uploadExcelBtn');
     const uploadExcelModal = document.getElementById('uploadExcelModal');
     const closeUploadExcelModal = document.getElementById('closeUploadExcelModal');
@@ -911,13 +695,10 @@ if (isset($_GET['edit'])) {
     const progressFill = document.querySelector('.progress-fill');
     const progressText = document.querySelector('.progress-text');
 
-    // Upload modal functionality
     if (uploadExcelBtn) {
       uploadExcelBtn.addEventListener('click', () => openModal(uploadExcelModal));
       closeUploadExcelModal.addEventListener('click', () => closeModal(uploadExcelModal));
       cancelUploadExcel.addEventListener('click', () => closeModal(uploadExcelModal));
-      
-      // Close modal when clicking outside
       uploadExcelModal.addEventListener('click', (e) => {
         if (e.target === uploadExcelModal) {
           closeModal(uploadExcelModal);
@@ -925,7 +706,6 @@ if (isset($_GET['edit'])) {
       });
     }
 
-    // File selection handler
     excelFile.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -936,8 +716,6 @@ if (isset($_GET['edit'])) {
           <strong>Type:</strong> ${file.type || 'Unknown'}
         `;
         submitUpload.disabled = false;
-        
-        // Hide any previous results
         uploadResult.style.display = 'none';
       } else {
         fileInfo.innerHTML = '';
@@ -945,44 +723,32 @@ if (isset($_GET['edit'])) {
       }
     });
 
-    // Upload submission handler
     submitUpload.addEventListener('click', async () => {
       const file = excelFile.files[0];
       if (!file) return;
-
-      // Show progress
       uploadProgress.style.display = 'block';
       uploadResult.style.display = 'none';
       submitUpload.disabled = true;
-      
-      // Simulate progress
       let progress = 0;
       const progressInterval = setInterval(() => {
         progress += Math.random() * 20;
         if (progress > 90) progress = 90;
         progressFill.style.width = progress + '%';
       }, 200);
-
       try {
         const formData = new FormData();
         formData.append('excel_file', file);
-
         const response = await fetch('upload_excel_ethics_reviewed_protocols.php', {
           method: 'POST',
           body: formData
         });
-
         const result = await response.json();
-        
         clearInterval(progressInterval);
         progressFill.style.width = '100%';
         progressText.textContent = 'Upload complete!';
-
-        // Show result
         setTimeout(() => {
           uploadProgress.style.display = 'none';
           uploadResult.style.display = 'block';
-          
           if (result.success) {
             uploadResult.className = 'upload-result success';
             uploadResult.innerHTML = `
@@ -991,8 +757,6 @@ if (isset($_GET['edit'])) {
               ${result.data.errors && result.data.errors.length > 0 ? 
                 `<br><br><strong>Errors:</strong><br>${result.data.errors.join('<br>')}` : ''}
             `;
-            
-            // Reload page after successful upload to show new data
             setTimeout(() => {
               window.location.reload();
             }, 2000);
@@ -1003,10 +767,8 @@ if (isset($_GET['edit'])) {
               <strong>Error:</strong> ${result.message}
             `;
           }
-          
           submitUpload.disabled = false;
         }, 500);
-
       } catch (error) {
         clearInterval(progressInterval);
         uploadProgress.style.display = 'none';
@@ -1020,7 +782,6 @@ if (isset($_GET['edit'])) {
       }
     });
 
-    // Reset upload form when modal is closed
     function resetUploadForm() {
       excelFile.value = '';
       fileInfo.innerHTML = '';
@@ -1030,19 +791,14 @@ if (isset($_GET['edit'])) {
       progressText.textContent = 'Uploading...';
       submitUpload.disabled = true;
     }
-
-    // Add reset to close handlers
     closeUploadExcelModal.addEventListener('click', () => {
       closeModal(uploadExcelModal);
       resetUploadForm();
     });
-    
     cancelUploadExcel.addEventListener('click', () => {
       closeModal(uploadExcelModal);
       resetUploadForm();
     });
-
-    // Also reset when clicking outside modal
     uploadExcelModal.addEventListener('click', (e) => {
       if (e.target === uploadExcelModal) {
         resetUploadForm();
