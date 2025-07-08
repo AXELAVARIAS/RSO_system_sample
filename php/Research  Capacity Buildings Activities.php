@@ -1010,7 +1010,7 @@ if (isset($_GET['edit'])) {
       rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
       if (checkedCount > 0) {
         bulkDeleteBtn.style.display = '';
-        bulkDeleteBtn.disabled = checkedCount < 2;
+        bulkDeleteBtn.disabled = false;
       } else {
         bulkDeleteBtn.style.display = 'none';
         bulkDeleteBtn.disabled = true;
