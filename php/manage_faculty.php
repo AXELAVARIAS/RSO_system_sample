@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once '../database/config.php';
 // Handle logout
 if (isset($_POST['logout'])) {
     session_destroy();
@@ -12,324 +13,372 @@ if (empty($_SESSION['admin_logged_in'])) {
     exit;
 }
 // manage_faculty.php - Admin management of faculty accounts
-$users_file = 'users.csv';
 
-// Handle delete request
+// --- Faculty and RSO Accounts Management (SQL version) ---
+$faculty = [];
+$rso_accounts = [];
+try {
+    $db = getDB();
+    $faculty = $db->fetchAll("SELECT * FROM users WHERE user_type = 'faculty' ORDER BY full_name");
+    $rso_accounts = $db->fetchAll("SELECT * FROM users WHERE user_type = 'rso' ORDER BY full_name");
+} catch (Exception $e) {
+    $users_error_message = 'Failed to load user accounts: ' . $e->getMessage();
+}
+
+// Handle delete requests (SQL version)
 if (isset($_GET['delete']) && !empty($_GET['delete'])) {
     $delete_email = $_GET['delete'];
-    if (file_exists($users_file)) {
-        $rows = [];
-        $deleted = false;
-        $file = fopen($users_file, 'r');
-        while (($data = fgetcsv($file)) !== false) {
-            if ($data[0] === $delete_email && $data[2] === 'faculty') {
-                $deleted = true;
-                continue; // skip this row
-            }
-            $rows[] = $data;
-        }
-        fclose($file);
-        $file = fopen($users_file, 'w');
-        foreach ($rows as $row) {
-            fputcsv($file, $row);
-        }
-        fclose($file);
+    try {
+        $db = getDB();
+        $db->query("DELETE FROM users WHERE email = ? AND user_type = 'faculty'", [$delete_email]);
+        header('Location: ' . $_SERVER['PHP_SELF'] . '#faculty-accounts');
+        exit;
+    } catch (Exception $e) {
+        $users_error_message = 'Failed to delete faculty account: ' . $e->getMessage();
     }
 }
 
-// PHP: Handle RSO delete request
 if (isset($_GET['delete_rso']) && !empty($_GET['delete_rso'])) {
     $delete_email = $_GET['delete_rso'];
-    if (file_exists($users_file)) {
-        $rows = [];
-        $deleted = false;
-        $file = fopen($users_file, 'r');
-        while (($data = fgetcsv($file)) !== false) {
-            if ($data[0] === $delete_email && $data[2] === 'rso') {
-                $deleted = true;
-                continue; // skip this row
-            }
-            $rows[] = $data;
-        }
-        fclose($file);
-        $file = fopen($users_file, 'w');
-        foreach ($rows as $row) {
-            fputcsv($file, $row);
-        }
-        fclose($file);
+    try {
+        $db = getDB();
+        $db->query("DELETE FROM users WHERE email = ? AND user_type = 'rso'", [$delete_email]);
+        header('Location: ' . $_SERVER['PHP_SELF'] . '#faculty-accounts');
+        exit;
+    } catch (Exception $e) {
+        $users_error_message = 'Failed to delete RSO account: ' . $e->getMessage();
     }
 }
 
-// Read all faculty users
-$faculty = [];
-if (file_exists($users_file)) {
-    $file = fopen($users_file, 'r');
-    while (($data = fgetcsv($file)) !== false) {
-        if (isset($data[2]) && $data[2] === 'faculty') {
-            $faculty[] = $data;
+// Handle activate/deactivate requests
+if (isset($_POST['toggle_active']) && isset($_POST['toggle_email'])) {
+    $toggle_email = $_POST['toggle_email'];
+    try {
+        $db = getDB();
+        // Get current status
+        $user = $db->fetch("SELECT is_active FROM users WHERE email = ? AND user_type = 'faculty'", [$toggle_email]);
+        if ($user) {
+            $new_status = ($user['is_active'] ?? 1) ? 0 : 1;
+            $db->query("UPDATE users SET is_active = ? WHERE email = ? AND user_type = 'faculty'", [$new_status, $toggle_email]);
         }
+        header('Location: ' . $_SERVER['PHP_SELF'] . '#faculty-accounts');
+        exit;
+    } catch (Exception $e) {
+        $users_error_message = 'Failed to update account status: ' . $e->getMessage();
     }
-    fclose($file);
 }
 
-// PHP: Read all RSO users
-$rso_accounts = [];
-if (file_exists($users_file)) {
-    $file = fopen($users_file, 'r');
-    while (($data = fgetcsv($file)) !== false) {
-        if (isset($data[2]) && $data[2] === 'rso') {
-            $rso_accounts[] = $data;
-        }
+// Update backend logic to accept status from dropdown
+if (isset($_POST['set_active_status']) && isset($_POST['toggle_email']) && isset($_POST['new_status'])) {
+    $toggle_email = $_POST['toggle_email'];
+    $new_status = ($_POST['new_status'] === '1') ? 1 : 0;
+    try {
+        $db = getDB();
+        $db->query("UPDATE users SET is_active = ? WHERE email = ? AND user_type = 'faculty'", [$new_status, $toggle_email]);
+        header('Location: ' . $_SERVER['PHP_SELF'] . '#faculty-accounts');
+        exit;
+    } catch (Exception $e) {
+        $users_error_message = 'Failed to update account status: ' . $e->getMessage();
     }
-    fclose($file);
 }
 
-// Data Collection Tools Management
-$dct_file = 'data_collection_tools.csv';
+// Update backend logic to accept status from dropdown for RSO accounts
+if (isset($_POST['set_active_status_rso']) && isset($_POST['toggle_email_rso']) && isset($_POST['new_status_rso'])) {
+    $toggle_email = $_POST['toggle_email_rso'];
+    $new_status = ($_POST['new_status_rso'] === '1') ? 1 : 0;
+    try {
+        $db = getDB();
+        $db->query("UPDATE users SET is_active = ? WHERE email = ? AND user_type = 'rso'", [$new_status, $toggle_email]);
+        header('Location: ' . $_SERVER['PHP_SELF'] . '#rso-accounts');
+        exit;
+    } catch (Exception $e) {
+        $users_error_message = 'Failed to update RSO account status: ' . $e->getMessage();
+    }
+}
+
+// Data Collection Tools Management (SQL version)
 $dct_entries = [];
-if (file_exists($dct_file)) {
-    $fp = fopen($dct_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $dct_entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $dct_entries = $db->fetchAll("SELECT * FROM data_collection_tools ORDER BY submission_date DESC");
+} catch (Exception $e) {
+    $dct_error_message = 'Failed to load data collection tools: ' . $e->getMessage();
 }
 
-// Handle DCT delete
-if (isset($_POST['delete_dct']) && isset($_POST['dct_index'])) {
-    $index = (int)$_POST['dct_index'];
-    if (isset($dct_entries[$index])) {
-        array_splice($dct_entries, $index, 1);
-        $fp = fopen($dct_file, 'w');
-        foreach ($dct_entries as $entry) {
-            fputcsv($fp, $entry);
+// Handle DCT add, edit, delete (SQL version)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $db = getDB();
+        // Add new entry
+        if (isset($_POST['add_dct'])) {
+            $faculty = $_POST['dct_faculty'] ?? '';
+            $degree = $_POST['dct_degree'] ?? '';
+            $sex = $_POST['dct_sex'] ?? '';
+            $title = $_POST['dct_title'] ?? '';
+            $ownership = $_POST['dct_ownership'] ?? '';
+            $presented = $_POST['dct_presented'] ?? '';
+            $published = $_POST['dct_published'] ?? '';
+            $journal = $_POST['dct_journal'] ?? '';
+            if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
+                $db->query("INSERT INTO data_collection_tools (researcher_name, degree, gender, research_title, role, location, submission_date, research_area) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#data-tools');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-}
-
-// Handle DCT edit save
-if (isset($_POST['save_dct_edit']) && isset($_POST['dct_index'])) {
-    $index = (int)$_POST['dct_index'];
-    $faculty_name = $_POST['faculty'] ?? '';
-    $degree = $_POST['degree'] ?? '';
-    $sex = $_POST['sex'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $ownership = $_POST['ownership'] ?? '';
-    $presented = $_POST['presented'] ?? '';
-    $published = $_POST['published'] ?? '';
-    $journal = $_POST['journal'] ?? '';
-    if ($faculty_name && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
-        $dct_entries[$index] = [$faculty_name, $degree, $sex, $title, $ownership, $presented, $published, $journal];
-        $fp = fopen($dct_file, 'w');
-        foreach ($dct_entries as $entry) {
-            fputcsv($fp, $entry);
+        // Edit entry
+        if (isset($_POST['save_dct_edit']) && isset($_POST['dct_id'])) {
+            $id = (int)$_POST['dct_id'];
+            $faculty = $_POST['faculty'] ?? '';
+            $degree = $_POST['degree'] ?? '';
+            $sex = $_POST['sex'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $ownership = $_POST['ownership'] ?? '';
+            $presented = $_POST['presented'] ?? '';
+            $published = $_POST['published'] ?? '';
+            $journal = $_POST['journal'] ?? '';
+            if ($faculty && $degree && $sex && $title && $ownership && $presented && $published && $journal) {
+                $db->query("UPDATE data_collection_tools SET researcher_name = ?, degree = ?, gender = ?, research_title = ?, role = ?, location = ?, submission_date = ?, research_area = ? WHERE id = ?",
+                    [$faculty, $degree, $sex, $title, $ownership, $presented, $published, $journal, $id]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#data-tools');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Delete entry
+        if (isset($_POST['delete_dct']) && isset($_POST['dct_id'])) {
+            $id = (int)$_POST['dct_id'];
+            $db->query("DELETE FROM data_collection_tools WHERE id = ?", [$id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '#data-tools');
+            exit;
+        }
+    } catch (Exception $e) {
+        $dct_error_message = 'Database error: ' . $e->getMessage();
     }
 }
 
-$dct_edit_index = isset($_GET['dct_edit']) ? (int)$_GET['dct_edit'] : null;
-
-// --- KPI Records Management ---
-$kpi_file = 'kpi_records.csv';
+// --- KPI Records Management (SQL version) ---
 $kpi_entries = [];
-if (file_exists($kpi_file)) {
-    $fp = fopen($kpi_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $kpi_entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $kpi_entries = $db->fetchAll("SELECT * FROM kpi_records ORDER BY id DESC");
+} catch (Exception $e) {
+    $kpi_error_message = 'Failed to load KPI records: ' . $e->getMessage();
 }
-$kpi_edit_index = isset($_GET['kpi_edit']) ? (int)$_GET['kpi_edit'] : null;
-$kpi_edit_entry = ($kpi_edit_index !== null && isset($kpi_entries[$kpi_edit_index])) ? $kpi_entries[$kpi_edit_index] : null;
-if (isset($_POST['delete_kpi']) && isset($_POST['kpi_index'])) {
-    $index = (int)$_POST['kpi_index'];
-    if (isset($kpi_entries[$index])) {
-        array_splice($kpi_entries, $index, 1);
-        $fp = fopen($kpi_file, 'w');
-        foreach ($kpi_entries as $entry) {
-            fputcsv($fp, $entry);
+
+// Handle KPI add, edit, delete (SQL version)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $db = getDB();
+        // Add new entry
+        if (isset($_POST['add_kpi'])) {
+            $faculty = $_POST['kpi_faculty'] ?? '';
+            $period = $_POST['kpi_period'] ?? '';
+            $publications = $_POST['kpi_publications'] ?? '';
+            $trainings = $_POST['kpi_trainings'] ?? '';
+            $presentations = $_POST['kpi_presentations'] ?? '';
+            $score = $_POST['kpi_score'] ?? '';
+            $performance = $_POST['kpi_performance'] ?? '';
+            if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
+                $db->query("INSERT INTO kpi_records (faculty_name, quarter, publications_count, research_projects_count, presentations_count, performance_score, performance_rating) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [$faculty, $period, $publications, $trainings, $presentations, $score, $performance]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#kpi-records');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-}
-if (isset($_POST['save_kpi_edit']) && isset($_POST['kpi_index'])) {
-    $index = (int)$_POST['kpi_index'];
-    $faculty = $_POST['faculty'] ?? '';
-    $period = $_POST['period'] ?? '';
-    $publications = $_POST['publications'] ?? '';
-    $trainings = $_POST['trainings'] ?? '';
-    $presentations = $_POST['presentations'] ?? '';
-    $score = $_POST['score'] ?? '';
-    $performance = $_POST['performance'] ?? '';
-    if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
-        $kpi_entries[$index] = [$faculty, $period, $publications, $trainings, $presentations, $score, $performance];
-        $fp = fopen($kpi_file, 'w');
-        foreach ($kpi_entries as $entry) {
-            fputcsv($fp, $entry);
+        // Edit entry
+        if (isset($_POST['save_kpi_edit']) && isset($_POST['kpi_id'])) {
+            $id = (int)$_POST['kpi_id'];
+            $faculty = $_POST['faculty'] ?? '';
+            $period = $_POST['period'] ?? '';
+            $publications = $_POST['publications'] ?? '';
+            $trainings = $_POST['trainings'] ?? '';
+            $presentations = $_POST['presentations'] ?? '';
+            $score = $_POST['score'] ?? '';
+            $performance = $_POST['performance'] ?? '';
+            if ($faculty && $period && $publications && $trainings && $presentations && $score && $performance) {
+                $db->query("UPDATE kpi_records SET faculty_name = ?, quarter = ?, publications_count = ?, research_projects_count = ?, presentations_count = ?, performance_score = ?, performance_rating = ? WHERE id = ?",
+                    [$faculty, $period, $publications, $trainings, $presentations, $score, $performance, $id]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#kpi-records');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Delete entry
+        if (isset($_POST['delete_kpi']) && isset($_POST['kpi_id'])) {
+            $id = (int)$_POST['kpi_id'];
+            $db->query("DELETE FROM kpi_records WHERE id = ?", [$id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '#kpi-records');
+            exit;
+        }
+    } catch (Exception $e) {
+        $kpi_error_message = 'Database error: ' . $e->getMessage();
     }
 }
 
-// --- Ethics Reviewed Protocols Management ---
-$ethics_file = 'ethics_reviewed_protocols.csv';
+// --- Ethics Reviewed Protocols Management (SQL version) ---
 $ethics_entries = [];
-$ethics_header = null;
-if (file_exists($ethics_file)) {
-    $fp = fopen($ethics_file, 'r');
-    $first_row = true;
-    while ($row = fgetcsv($fp)) {
-        if ($first_row) {
-            $ethics_header = $row; // Store header separately
-            $first_row = false;
-        } else {
-            $ethics_entries[] = $row; // Only store data rows
-        }
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $ethics_entries = $db->fetchAll("SELECT * FROM ethics_reviewed_protocols ORDER BY id DESC");
+} catch (Exception $e) {
+    $ethics_error_message = 'Failed to load protocols: ' . $e->getMessage();
 }
-$ethics_edit_index = isset($_GET['ethics_edit']) ? (int)$_GET['ethics_edit'] : null;
-$ethics_edit_entry = ($ethics_edit_index !== null && isset($ethics_entries[$ethics_edit_index])) ? $ethics_entries[$ethics_edit_index] : null;
-if (isset($_POST['delete_ethics']) && isset($_POST['ethics_index'])) {
-    $index = (int)$_POST['ethics_index'];
-    if (isset($ethics_entries[$index])) {
-        array_splice($ethics_entries, $index, 1);
-        $fp = fopen($ethics_file, 'w');
-        // Write header first
-        if ($ethics_header) {
-            fputcsv($fp, $ethics_header);
+
+// Handle Ethics add, edit, delete (SQL version)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $db = getDB();
+        // Add new entry
+        if (isset($_POST['add_ethics'])) {
+            $no = $_POST['ethics_no'] ?? '';
+            $title = $_POST['ethics_title'] ?? '';
+            $department = $_POST['ethics_department'] ?? '';
+            $status = $_POST['ethics_status'] ?? '';
+            $remarks = $_POST['ethics_remarks'] ?? '';
+            if ($no && $title && $department && $status && $remarks) {
+                $db->query("INSERT INTO ethics_reviewed_protocols (protocol_number, title, department, status, action_taken) VALUES (?, ?, ?, ?, ?)",
+                    [$no, $title, $department, $status, $remarks]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#ethics-protocols');
+                exit;
+            }
         }
-        // Write data rows
-        foreach ($ethics_entries as $entry) {
-            fputcsv($fp, $entry);
+        // Edit entry
+        if (isset($_POST['save_ethics_edit']) && isset($_POST['ethics_id'])) {
+            $id = (int)$_POST['ethics_id'];
+            $no = $_POST['no'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $remarks = $_POST['remarks'] ?? '';
+            if ($no && $title && $department && $status && $remarks) {
+                $db->query("UPDATE ethics_reviewed_protocols SET protocol_number = ?, title = ?, department = ?, status = ?, action_taken = ? WHERE id = ?",
+                    [$no, $title, $department, $status, $remarks, $id]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#ethics-protocols');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-}
-if (isset($_POST['save_ethics_edit']) && isset($_POST['ethics_index'])) {
-    $index = (int)$_POST['ethics_index'];
-    $no = $_POST['no'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $action = $_POST['action'] ?? '';
-    if ($no && $title && $department && $status && $action) {
-        $ethics_entries[$index] = [$no, $title, $department, $status, $action];
-        $fp = fopen($ethics_file, 'w');
-        // Write header first
-        if ($ethics_header) {
-            fputcsv($fp, $ethics_header);
+        // Delete entry
+        if (isset($_POST['delete_ethics']) && isset($_POST['ethics_id'])) {
+            $id = (int)$_POST['ethics_id'];
+            $db->query("DELETE FROM ethics_reviewed_protocols WHERE id = ?", [$id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '#ethics-protocols');
+            exit;
         }
-        // Write data rows
-        foreach ($ethics_entries as $entry) {
-            fputcsv($fp, $entry);
-        }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+    } catch (Exception $e) {
+        $ethics_error_message = 'Database error: ' . $e->getMessage();
     }
 }
 
-// --- Publication and Presentation Management ---
-$pub_file = 'publication_presentation.csv';
+// --- Publication and Presentation Management (SQL version) ---
 $pub_entries = [];
-if (file_exists($pub_file)) {
-    $fp = fopen($pub_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $pub_entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $pub_entries = $db->fetchAll("SELECT * FROM publication_presentations ORDER BY application_date DESC");
+} catch (Exception $e) {
+    $pub_error_message = 'Failed to load publications: ' . $e->getMessage();
 }
-$pub_edit_index = isset($_GET['pub_edit']) ? (int)$_GET['pub_edit'] : null;
-$pub_edit_entry = ($pub_edit_index !== null && isset($pub_entries[$pub_edit_index])) ? $pub_entries[$pub_edit_index] : null;
-if (isset($_POST['delete_pub']) && isset($_POST['pub_index'])) {
-    $index = (int)$_POST['pub_index'];
-    if (isset($pub_entries[$index])) {
-        array_splice($pub_entries, $index, 1);
-        $fp = fopen($pub_file, 'w');
-        foreach ($pub_entries as $entry) {
-            fputcsv($fp, $entry);
+
+// Handle Publication add, edit, delete (SQL version)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $db = getDB();
+        // Add new entry
+        if (isset($_POST['add_pub'])) {
+            $date = $_POST['pub_date'] ?? '';
+            $faculty = $_POST['pub_faculty'] ?? '';
+            $title = $_POST['pub_title'] ?? '';
+            $department = $_POST['pub_department'] ?? '';
+            $subsidy = $_POST['pub_subsidy'] ?? '';
+            $status = $_POST['pub_status'] ?? '';
+            $locality = $_POST['pub_locality'] ?? '';
+            if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
+                $db->query("INSERT INTO publication_presentations (application_date, author_name, paper_title, department, research_subsidy, status, scope) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [$date, $faculty, $title, $department, $subsidy, $status, $locality]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#publication-presentation');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-}
-if (isset($_POST['save_pub_edit']) && isset($_POST['pub_index'])) {
-    $index = (int)$_POST['pub_index'];
-    $date = $_POST['date'] ?? '';
-    $faculty = $_POST['faculty'] ?? '';
-    $title = $_POST['title'] ?? '';
-    $department = $_POST['department'] ?? '';
-    $subsidy = $_POST['subsidy'] ?? '';
-    $status = $_POST['status'] ?? '';
-    $locality = $_POST['locality'] ?? '';
-    if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
-        $pub_entries[$index] = [$date, $faculty, $title, $department, $subsidy, $status, $locality];
-        $fp = fopen($pub_file, 'w');
-        foreach ($pub_entries as $entry) {
-            fputcsv($fp, $entry);
+        // Edit entry
+        if (isset($_POST['save_pub_edit']) && isset($_POST['pub_id'])) {
+            $id = (int)$_POST['pub_id'];
+            $date = $_POST['date'] ?? '';
+            $faculty = $_POST['faculty'] ?? '';
+            $title = $_POST['title'] ?? '';
+            $department = $_POST['department'] ?? '';
+            $subsidy = $_POST['subsidy'] ?? '';
+            $status = $_POST['status'] ?? '';
+            $locality = $_POST['locality'] ?? '';
+            if ($date && $faculty && $title && $department && $subsidy && $status && $locality) {
+                $db->query("UPDATE publication_presentations SET application_date = ?, author_name = ?, paper_title = ?, department = ?, research_subsidy = ?, status = ?, scope = ? WHERE id = ?",
+                    [$date, $faculty, $title, $department, $subsidy, $status, $locality, $id]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#publication-presentation');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Delete entry
+        if (isset($_POST['delete_pub']) && isset($_POST['pub_id'])) {
+            $id = (int)$_POST['pub_id'];
+            $db->query("DELETE FROM publication_presentations WHERE id = ?", [$id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '#publication-presentation');
+            exit;
+        }
+    } catch (Exception $e) {
+        $pub_error_message = 'Database error: ' . $e->getMessage();
     }
 }
 
-// --- Research Capacity Building Activities Management ---
-$rcb_file = 'research_capacity_data.csv';
+// --- Research Capacity Building Activities Management (SQL version) ---
 $rcb_entries = [];
-if (file_exists($rcb_file)) {
-    $fp = fopen($rcb_file, 'r');
-    while ($row = fgetcsv($fp)) {
-        $rcb_entries[] = $row;
-    }
-    fclose($fp);
+try {
+    $db = getDB();
+    $rcb_entries = $db->fetchAll("SELECT * FROM research_capacity_activities ORDER BY activity_date DESC");
+} catch (Exception $e) {
+    $rcb_error_message = 'Failed to load research capacity activities: ' . $e->getMessage();
 }
-$rcb_edit_index = isset($_GET['rcb_edit']) ? (int)$_GET['rcb_edit'] : null;
-$rcb_edit_entry = ($rcb_edit_index !== null && isset($rcb_entries[$rcb_edit_index])) ? $rcb_entries[$rcb_edit_index] : null;
-if (isset($_POST['delete_rcb']) && isset($_POST['rcb_index'])) {
-    $index = (int)$_POST['rcb_index'];
-    if (isset($rcb_entries[$index])) {
-        array_splice($rcb_entries, $index, 1);
-        $fp = fopen($rcb_file, 'w');
-        foreach ($rcb_entries as $entry) {
-            fputcsv($fp, $entry);
+
+// Handle RCB add, edit, delete (SQL version)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        $db = getDB();
+        // Add new entry
+        if (isset($_POST['add_rcb'])) {
+            $date = $_POST['rcb_date'] ?? '';
+            $name = $_POST['rcb_name'] ?? '';
+            $venue = $_POST['rcb_venue'] ?? '';
+            $facilitators = $_POST['rcb_facilitators'] ?? '';
+            $num_participants = $_POST['rcb_num_participants'] ?? '';
+            $status = $_POST['rcb_status'] ?? '';
+            if ($date && $name && $venue && $facilitators && $num_participants && $status) {
+                $db->query("INSERT INTO research_capacity_activities (activity_date, activity_title, venue, organizer, participants_count, status) VALUES (?, ?, ?, ?, ?, ?)",
+                    [$date, $name, $venue, $facilitators, $num_participants, $status]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#research-capacity');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
-    }
-}
-if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
-    $index = (int)$_POST['rcb_index'];
-    $date = $_POST['date'] ?? '';
-    $name = $_POST['name'] ?? '';
-    $venue = $_POST['venue'] ?? '';
-    $facilitators = $_POST['facilitators'] ?? '';
-    $num_participants = $_POST['num_participants'] ?? '';
-    $status = $_POST['status'] ?? '';
-    if ($date && $name && $venue && $facilitators && $num_participants && $status) {
-        $rcb_entries[$index] = [$date, $name, $venue, $facilitators, $num_participants, $status];
-        $fp = fopen($rcb_file, 'w');
-        foreach ($rcb_entries as $entry) {
-            fputcsv($fp, $entry);
+        // Edit entry
+        if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_id'])) {
+            $id = (int)$_POST['rcb_id'];
+            $date = $_POST['date'] ?? '';
+            $name = $_POST['name'] ?? '';
+            $venue = $_POST['venue'] ?? '';
+            $facilitators = $_POST['facilitators'] ?? '';
+            $num_participants = $_POST['num_participants'] ?? '';
+            $status = $_POST['status'] ?? '';
+            if ($date && $name && $venue && $facilitators && $num_participants && $status) {
+                $db->query("UPDATE research_capacity_activities SET activity_date = ?, activity_title = ?, venue = ?, organizer = ?, participants_count = ?, status = ? WHERE id = ?",
+                    [$date, $name, $venue, $facilitators, $num_participants, $status, $id]);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '#research-capacity');
+                exit;
+            }
         }
-        fclose($fp);
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // Delete entry
+        if (isset($_POST['delete_rcb']) && isset($_POST['rcb_id'])) {
+            $id = (int)$_POST['rcb_id'];
+            $db->query("DELETE FROM research_capacity_activities WHERE id = ?", [$id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '#research-capacity');
+            exit;
+        }
+    } catch (Exception $e) {
+        $rcb_error_message = 'Database error: ' . $e->getMessage();
     }
 }
 ?>
@@ -599,16 +648,7 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             border-left: 4px solid var(--btn-primary-bg);
             font-weight: bold;
         }
-        .highlight-search {
-            background: #fbbf24;
-            color: #1f2937;
-            border-radius: 3px;
-            padding: 0 2px;
-        }
-        [data-theme="dark"] .highlight-search {
-            background: #f59e0b;
-            color: #ffffff;
-        }
+
         /* Theme toggle button styling */
         .theme-toggle {
             display: flex;
@@ -665,87 +705,74 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             if (!found) setActiveLinkByHash();
         });
 
-        // Search highlight
+        // Search filter functionality
         const searchInput = document.querySelector('.custom-topbar .search-bar input[type="search"]');
         if (searchInput) {
-            let matchIndex = 0;
-            function scrollToMatch(idx) {
-                const matches = document.querySelectorAll('.highlight-search');
-                if (matches.length) {
-                    if (idx >= matches.length) idx = 0;
-                    if (idx < 0) idx = matches.length - 1;
-                    matches[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    matchIndex = idx;
-                }
-            }
-            function highlightAndScroll() {
-                const query = searchInput.value.trim();
-                // Remove old highlights
-                document.querySelectorAll('.highlight-search').forEach(span => {
-                    const parent = span.parentNode;
-                    parent.replaceChild(document.createTextNode(span.textContent), span);
-                    parent.normalize();
-                });
-                if (!query) return;
-                // Highlight matches in all tables
+            function filterTables() {
+                const query = searchInput.value.trim().toLowerCase();
                 const tables = document.querySelectorAll('.dashboard-content table');
+                
                 tables.forEach(table => {
-                    Array.from(table.tBodies).forEach(tbody => {
-                        Array.from(tbody.rows).forEach(row => {
-                            Array.from(row.cells).forEach(cell => {
-                                highlightText(cell, query);
-                            });
+                    const tbody = table.querySelector('tbody');
+                    if (!tbody) return;
+                    
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    let hasVisibleRows = false;
+                    
+                    rows.forEach(row => {
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        let rowMatches = false;
+                        
+                        // Check if any cell in the row contains the search query
+                        cells.forEach(cell => {
+                            const cellText = cell.textContent.toLowerCase();
+                            if (cellText.includes(query)) {
+                                rowMatches = true;
+                            }
                         });
+                        
+                        // Show/hide the row based on match
+                        if (query === '' || rowMatches) {
+                            row.style.display = '';
+                            hasVisibleRows = true;
+                        } else {
+                            row.style.display = 'none';
+                        }
                     });
+                    
+                    // Show "no results" message if no rows match
+                    const noResultsRow = tbody.querySelector('.no-results-row');
+                    if (noResultsRow) {
+                        noResultsRow.remove();
+                    }
+                    
+                    if (query !== '' && !hasVisibleRows) {
+                        const colSpan = tbody.querySelector('tr') ? tbody.querySelector('tr').cells.length : 1;
+                        const noResults = document.createElement('tr');
+                        noResults.className = 'no-results-row';
+                        noResults.innerHTML = `<td colspan="${colSpan}" class="text-center text-muted">No results found for "${query}"</td>`;
+                        tbody.appendChild(noResults);
+                    }
                 });
-                matchIndex = 0;
-                scrollToMatch(matchIndex);
             }
-            searchInput.addEventListener('input', function() {
-                highlightAndScroll();
-            });
-            // Scroll to next match on Enter
+            
+            // Filter on input
+            searchInput.addEventListener('input', filterTables);
+            
+            // Prevent form submission on Enter
             searchInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    const matches = document.querySelectorAll('.highlight-search');
-                    if (matches.length) {
-                        matchIndex = (matchIndex + 1) % matches.length;
-                        scrollToMatch(matchIndex);
-                    }
                 }
             });
-            // Scroll to next match on search button click
+            
+            // Prevent form submission on search button click
             const searchBtn = searchInput.parentElement.querySelector('button[type="submit"]');
             if (searchBtn) {
                 searchBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    const matches = document.querySelectorAll('.highlight-search');
-                    if (matches.length) {
-                        matchIndex = (matchIndex + 1) % matches.length;
-                        scrollToMatch(matchIndex);
-                    }
                 });
             }
-        }
-        function highlightText(element, query) {
-            if (!query) return;
-            const regex = new RegExp('('+escapeRegExp(query)+')', 'gi');
-            // Only highlight text nodes
-            Array.from(element.childNodes).forEach(node => {
-                if (node.nodeType === 3 && node.textContent.match(regex)) {
-                    const html = node.textContent.replace(regex, '<span class="highlight-search">$1</span>');
-                    const temp = document.createElement('span');
-                    temp.innerHTML = html;
-                    while (temp.firstChild) {
-                        element.insertBefore(temp.firstChild, node);
-                    }
-                    element.removeChild(node);
-                }
-            });
-        }
-        function escapeRegExp(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         }
 
         // Save scroll position before submitting any edit form
@@ -833,28 +860,49 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
             </div>
             <div style="font-size:2.5rem;opacity:0.2;"><i class="fa fa-user-shield"></i></div>
         </div>
+        <!-- Tab Navigation and tab-content removed, restore all sections as cards -->
         <div class="dashboard-grid">
             <div class="card-custom" id="faculty-accounts">
                 <div class="card-header"><i class="fa fa-users me-2"></i>Faculty Accounts</div>
                 <div class="card-body">
+                    <?php if (!empty($users_error_message)): ?>
+                        <div class="alert alert-error mb-2"><?php echo htmlspecialchars($users_error_message); ?></div>
+                    <?php endif; ?>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover align-middle">
                             <thead>
                                 <tr>
                                     <th>Email</th>
+                                    <th>Full Name</th>
+                                    <th>Department</th>
                                     <th>User Type</th>
+                                    <th>Status</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (count($faculty) === 0): ?>
-                                    <tr><td colspan="3" class="text-center">No faculty accounts found.</td></tr>
+                                    <tr><td colspan="6" class="text-center">No faculty accounts found.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($faculty as $user): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($user[0]); ?></td>
-                                            <td><?php echo htmlspecialchars($user[2]); ?></td>
-                                            <td><a class="btn btn-danger btn-sm" href="?delete=<?php echo urlencode($user[0]); ?>" onclick="return confirm('Delete this faculty account?');"><i class="fa fa-trash"></i> Delete</a></td>
+                                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['department']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['user_type']); ?></td>
+                                            <td>
+                                                <form method="post" action="" style="display:inline;">
+                                                    <input type="hidden" name="toggle_email" value="<?php echo htmlspecialchars($user['email']); ?>">
+                                                    <input type="hidden" name="set_active_status" value="1">
+                                                    <select name="new_status" class="form-select form-select-sm" style="width:110px;display:inline-block;" onchange="this.form.submit()">
+                                                        <option value="1" <?php if (isset($user['is_active']) && $user['is_active']) echo 'selected'; ?>>Active</option>
+                                                        <option value="0" <?php if (isset($user['is_active']) && !$user['is_active']) echo 'selected'; ?>>Inactive</option>
+                                                    </select>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <a class="btn btn-danger btn-sm" href="?delete=<?php echo urlencode($user['email']); ?>" onclick="return confirm('Delete this faculty account?');"><i class="fa fa-trash"></i> Delete</a>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -871,19 +919,36 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
                             <thead>
                                 <tr>
                                     <th>Email</th>
+                                    <th>Full Name</th>
+                                    <th>Department</th>
                                     <th>User Type</th>
+                                    <th>Status</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (count($rso_accounts) === 0): ?>
-                                    <tr><td colspan="3" class="text-center">No RSO accounts found.</td></tr>
+                                    <tr><td colspan="6" class="text-center">No RSO accounts found.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($rso_accounts as $user): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($user[0]); ?></td>
-                                            <td><?php echo htmlspecialchars($user[2]); ?></td>
-                                            <td><a class="btn btn-danger btn-sm" href="?delete_rso=<?php echo urlencode($user[0]); ?>" onclick="return confirm('Delete this RSO account?');"><i class="fa fa-trash"></i> Delete</a></td>
+                                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['department']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['user_type']); ?></td>
+                                            <td>
+                                                <form method="post" action="" style="display:inline;">
+                                                    <input type="hidden" name="toggle_email_rso" value="<?php echo htmlspecialchars($user['email']); ?>">
+                                                    <input type="hidden" name="set_active_status_rso" value="1">
+                                                    <select name="new_status_rso" class="form-select form-select-sm" style="width:110px;display:inline-block;" onchange="this.form.submit()">
+                                                        <option value="1" <?php if (isset($user['is_active']) && $user['is_active']) echo 'selected'; ?>>Active</option>
+                                                        <option value="0" <?php if (isset($user['is_active']) && !$user['is_active']) echo 'selected'; ?>>Inactive</option>
+                                                    </select>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <a class="btn btn-danger btn-sm" href="?delete_rso=<?php echo urlencode($user['email']); ?>" onclick="return confirm('Delete this RSO account?');"><i class="fa fa-trash"></i> Delete</a>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -896,55 +961,70 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="card-custom mt-4" id="data-tools">
             <div class="card-header bg-gradient" style="background:linear-gradient(90deg,#43cea2 0%,#185a9d 100%)!important;"><i class="fa fa-database me-2"></i>Data Collection Tools</div>
             <div class="card-body">
+                <!-- Add Data Collection Tool Form -->
+                <form method="post" class="row g-2 mb-3">
+                    <div class="col-md-2"><input type="text" name="dct_faculty" class="form-control" placeholder="Faculty Name" required></div>
+                    <div class="col-md-1"><input type="text" name="dct_degree" class="form-control" placeholder="Degree" required></div>
+                    <div class="col-md-1"><input type="text" name="dct_sex" class="form-control" placeholder="Sex" required></div>
+                    <div class="col-md-2"><input type="text" name="dct_title" class="form-control" placeholder="Research Title" required></div>
+                    <div class="col-md-1"><input type="text" name="dct_ownership" class="form-control" placeholder="Ownership" required></div>
+                    <div class="col-md-1"><input type="text" name="dct_presented" class="form-control" placeholder="Presented" required></div>
+                    <div class="col-md-2"><input type="text" name="dct_published" class="form-control" placeholder="Published" required></div>
+                    <div class="col-md-1"><input type="text" name="dct_journal" class="form-control" placeholder="Journal" required></div>
+                    <div class="col-md-1"><button type="submit" name="add_dct" class="btn btn-custom w-100">Add</button></div>
+                </form>
+                <?php if (!empty($dct_error_message)): ?>
+                    <div class="alert alert-error mb-2"><?php echo htmlspecialchars($dct_error_message); ?></div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
                         <thead>
                             <tr>
-                                <th>Name of Faculty</th>
+                                <th>Faculty Name</th>
                                 <th>Degree</th>
                                 <th>Sex</th>
                                 <th>Research Title</th>
                                 <th>Ownership</th>
-                                <th>Date & Venue Presented</th>
-                                <th>Date Published</th>
-                                <th>Journal Published</th>
+                                <th>Presented At</th>
+                                <th>Published Date</th>
+                                <th>Journal/Publication</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($dct_entries as $i => $entry): ?>
-                                <?php if ($dct_edit_index === $i): ?>
+                            <?php foreach ($dct_entries as $entry): ?>
+                                <?php if (isset($_GET['dct_edit']) && $_GET['dct_edit'] == $entry['id']): ?>
                                     <tr class="table-warning">
                                         <form method="post" action="">
-                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry[0]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="degree" value="<?php echo htmlspecialchars($entry[1]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="sex" value="<?php echo htmlspecialchars($entry[2]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry[3]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="ownership" value="<?php echo htmlspecialchars($entry[4]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="presented" value="<?php echo htmlspecialchars($entry[5]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="published" value="<?php echo htmlspecialchars($entry[6]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="journal" value="<?php echo htmlspecialchars($entry[7]); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry['researcher_name']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="degree" value="<?php echo htmlspecialchars($entry['degree']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="sex" value="<?php echo htmlspecialchars($entry['gender']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry['research_title']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="ownership" value="<?php echo htmlspecialchars($entry['role']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="presented" value="<?php echo htmlspecialchars($entry['location']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="published" value="<?php echo htmlspecialchars($entry['submission_date']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="journal" value="<?php echo htmlspecialchars($entry['research_area']); ?>" class="form-control form-control-sm" required></td>
                                             <td>
-                                                <input type="hidden" name="dct_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="dct_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="save_dct_edit" class="btn btn-custom btn-sm"><i class="fa fa-save"></i> Save</button>
-                                                <a href="manage_faculty.php" class="btn btn-secondary btn-sm">Cancel</a>
+                                                <a href="manage_faculty.php#data-tools" class="btn btn-secondary btn-sm">Cancel</a>
                                             </td>
                                         </form>
                                     </tr>
                                 <?php else: ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($entry[0]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[1]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[2]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[3]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[4]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[5]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[6]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[7]); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['researcher_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['degree']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['gender']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['research_title']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['role']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['location']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['submission_date']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['research_area']); ?></td>
                                         <td>
-                                            <a href="manage_faculty.php?dct_edit=<?php echo $i; ?>" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
+                                            <a href="manage_faculty.php?dct_edit=<?php echo $entry['id']; ?>#data-tools" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
                                             <form method="post" action="" style="display:inline;">
-                                                <input type="hidden" name="dct_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="dct_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_dct" class="btn btn-danger btn-sm" onclick="return confirm('Delete this entry?');"><i class="fa fa-trash"></i> Delete</button>
                                             </form>
                                         </td>
@@ -959,6 +1039,28 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="card-custom mt-4" id="kpi-records">
             <div class="card-header bg-gradient" style="background:linear-gradient(90deg,#f7971e 0%,#ffd200 100%)!important;"><i class="fa fa-chart-bar me-2"></i>Manage KPI Records</div>
             <div class="card-body">
+                <!-- Add KPI Record Form -->
+                <form method="post" class="row g-2 mb-3">
+                    <div class="col-md-2"><input type="text" name="kpi_faculty" class="form-control" placeholder="Faculty Name" required></div>
+                    <div class="col-md-1"><input type="text" name="kpi_period" class="form-control" placeholder="Period" required></div>
+                    <div class="col-md-1"><input type="number" name="kpi_publications" class="form-control" placeholder="Publications" min="0" required></div>
+                    <div class="col-md-1"><input type="number" name="kpi_trainings" class="form-control" placeholder="Trainings" min="0" required></div>
+                    <div class="col-md-1"><input type="number" name="kpi_presentations" class="form-control" placeholder="Presentations" min="0" required></div>
+                    <div class="col-md-1"><input type="number" name="kpi_score" class="form-control" placeholder="Score" min="0" max="10" step="0.1" required></div>
+                    <div class="col-md-2">
+                        <select name="kpi_performance" class="form-select" required>
+                            <option value="Excellent">Excellent</option>
+                            <option value="Very Good">Very Good</option>
+                            <option value="Good">Good</option>
+                            <option value="Satisfactory">Satisfactory</option>
+                            <option value="Needs Improvement">Needs Improvement</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1"><button type="submit" name="add_kpi" class="btn btn-custom w-100">Add</button></div>
+                </form>
+                <?php if (!empty($kpi_error_message)): ?>
+                    <div class="alert alert-error mb-2"><?php echo htmlspecialchars($kpi_error_message); ?></div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
                         <thead>
@@ -974,45 +1076,45 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($kpi_entries as $i => $entry): ?>
-                                <?php if ($kpi_edit_index === $i): ?>
-                                    <tr class="table-warning" id="edit-row-kpi-<?php echo $i; ?>">
+                            <?php foreach ($kpi_entries as $entry): ?>
+                                <?php if (isset($_GET['kpi_edit']) && $_GET['kpi_edit'] == $entry['id']): ?>
+                                    <tr class="table-warning" id="edit-row-kpi-<?php echo $entry['id']; ?>">
                                         <form method="post" action="">
-                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry[0]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="period" value="<?php echo htmlspecialchars($entry[1]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="number" name="publications" min="0" value="<?php echo htmlspecialchars($entry[2]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="number" name="trainings" min="0" value="<?php echo htmlspecialchars($entry[3]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="number" name="presentations" min="0" value="<?php echo htmlspecialchars($entry[4]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="number" name="score" min="0" max="10" step="0.1" value="<?php echo htmlspecialchars($entry[5]); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry['faculty_name']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="period" value="<?php echo htmlspecialchars($entry['quarter']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="number" name="publications" min="0" value="<?php echo htmlspecialchars($entry['publications_count']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="number" name="trainings" min="0" value="<?php echo htmlspecialchars($entry['research_projects_count']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="number" name="presentations" min="0" value="<?php echo htmlspecialchars($entry['presentations_count']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="number" name="score" min="0" max="10" step="0.1" value="<?php echo htmlspecialchars($entry['performance_score']); ?>" class="form-control form-control-sm" required></td>
                                             <td>
                                                 <select name="performance" class="form-select form-select-sm" required>
-                                                    <option value="Excellent" <?php if ($entry[6]==='Excellent') echo 'selected'; ?>>Excellent</option>
-                                                    <option value="Very Good" <?php if ($entry[6]==='Very Good') echo 'selected'; ?>>Very Good</option>
-                                                    <option value="Good" <?php if ($entry[6]==='Good') echo 'selected'; ?>>Good</option>
-                                                    <option value="Satisfactory" <?php if ($entry[6]==='Satisfactory') echo 'selected'; ?>>Satisfactory</option>
-                                                    <option value="Needs Improvement" <?php if ($entry[6]==='Needs Improvement') echo 'selected'; ?>>Needs Improvement</option>
+                                                    <option value="Excellent" <?php if ($entry['performance_rating']==='Excellent') echo 'selected'; ?>>Excellent</option>
+                                                    <option value="Very Good" <?php if ($entry['performance_rating']==='Very Good') echo 'selected'; ?>>Very Good</option>
+                                                    <option value="Good" <?php if ($entry['performance_rating']==='Good') echo 'selected'; ?>>Good</option>
+                                                    <option value="Satisfactory" <?php if ($entry['performance_rating']==='Satisfactory') echo 'selected'; ?>>Satisfactory</option>
+                                                    <option value="Needs Improvement" <?php if ($entry['performance_rating']==='Needs Improvement') echo 'selected'; ?>>Needs Improvement</option>
                                                 </select>
                                             </td>
                                             <td>
-                                                <input type="hidden" name="kpi_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="kpi_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="save_kpi_edit" class="btn btn-custom btn-sm"><i class="fa fa-save"></i> Save</button>
-                                                <a href="manage_faculty.php" class="btn btn-secondary btn-sm">Cancel</a>
+                                                <a href="manage_faculty.php#kpi-records" class="btn btn-secondary btn-sm">Cancel</a>
                                             </td>
                                         </form>
                                     </tr>
                                 <?php else: ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($entry[0]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[1]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[2]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[3]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[4]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[5]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[6]); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['faculty_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['quarter']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['publications_count']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['research_projects_count']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['presentations_count']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['performance_score']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['performance_rating']); ?></td>
                                         <td>
-                                            <a href="manage_faculty.php?kpi_edit=<?php echo $i; ?>" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
+                                            <a href="manage_faculty.php?kpi_edit=<?php echo $entry['id']; ?>#kpi-records" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
                                             <form method="post" action="" style="display:inline;">
-                                                <input type="hidden" name="kpi_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="kpi_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_kpi" class="btn btn-danger btn-sm" onclick="return confirm('Delete this entry?');"><i class="fa fa-trash"></i> Delete</button>
                                             </form>
                                         </td>
@@ -1027,6 +1129,25 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="card-custom mt-4" id="ethics-protocols">
             <div class="card-header bg-gradient" style="background:linear-gradient(90deg,#ff5858 0%,#f09819 100%)!important;"><i class="fa fa-file-alt me-2"></i>Manage Ethics Reviewed Protocols</div>
             <div class="card-body">
+                <!-- Add Ethics Protocol Form -->
+                <form method="post" class="row g-2 mb-3">
+                    <div class="col-md-2"><input type="text" name="ethics_no" class="form-control" placeholder="No." required></div>
+                    <div class="col-md-2"><input type="text" name="ethics_title" class="form-control" placeholder="Title" required></div>
+                    <div class="col-md-2"><input type="text" name="ethics_department" class="form-control" placeholder="Department" required></div>
+                    <div class="col-md-2">
+                        <select name="ethics_status" class="form-select" required>
+                            <option value="Approved">Approved</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2"><input type="text" name="ethics_remarks" class="form-control" placeholder="Remarks" required></div>
+                    <div class="col-md-2"><button type="submit" name="add_ethics" class="btn btn-custom w-100">Add</button></div>
+                </form>
+                <?php if (!empty($ethics_error_message)): ?>
+                    <div class="alert alert-error mb-2"><?php echo htmlspecialchars($ethics_error_message); ?></div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
                         <thead>
@@ -1035,38 +1156,45 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
                                 <th>Title</th>
                                 <th>Department</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th>Remarks</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($ethics_entries as $i => $entry): ?>
-                                <?php if ($ethics_edit_index === $i): ?>
-                                    <tr class="table-warning" id="edit-row-ethics-<?php echo $i; ?>">
+                            <?php foreach ($ethics_entries as $entry): ?>
+                                <?php if (isset($_GET['ethics_edit']) && $_GET['ethics_edit'] == $entry['id']): ?>
+                                    <tr class="table-warning" id="edit-row-ethics-<?php echo $entry['id']; ?>">
                                         <form method="post" action="">
-                                            <td><input type="text" name="no" value="<?php echo htmlspecialchars($entry[0]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry[1]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="department" value="<?php echo htmlspecialchars($entry[2]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="status" value="<?php echo htmlspecialchars($entry[3]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="action" value="<?php echo htmlspecialchars($entry[4]); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="no" value="<?php echo htmlspecialchars($entry['protocol_number']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry['title']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="department" value="<?php echo htmlspecialchars($entry['department']); ?>" class="form-control form-control-sm" required></td>
                                             <td>
-                                                <input type="hidden" name="ethics_index" value="<?php echo $i; ?>">
+                                                <select name="status" class="form-select form-select-sm" required>
+                                                    <option value="Approved" <?php if ($entry['status']==='Approved') echo 'selected'; ?>>Approved</option>
+                                                    <option value="Under Review" <?php if ($entry['status']==='Under Review') echo 'selected'; ?>>Under Review</option>
+                                                    <option value="Pending" <?php if ($entry['status']==='Pending') echo 'selected'; ?>>Pending</option>
+                                                    <option value="Rejected" <?php if ($entry['status']==='Rejected') echo 'selected'; ?>>Rejected</option>
+                                                </select>
+                                            </td>
+                                            <td><input type="text" name="remarks" value="<?php echo htmlspecialchars($entry['action_taken']); ?>" class="form-control form-control-sm" placeholder="Remarks" required></td>
+                                            <td>
+                                                <input type="hidden" name="ethics_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="save_ethics_edit" class="btn btn-custom btn-sm"><i class="fa fa-save"></i> Save</button>
-                                                <a href="manage_faculty.php" class="btn btn-secondary btn-sm">Cancel</a>
+                                                <a href="manage_faculty.php#ethics-protocols" class="btn btn-secondary btn-sm">Cancel</a>
                                             </td>
                                         </form>
                                     </tr>
                                 <?php else: ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($entry[0]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[1]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[2]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[3]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[4]); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['protocol_number']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['title']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['department']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['status']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['action_taken']); ?></td>
                                         <td>
-                                            <a href="manage_faculty.php?ethics_edit=<?php echo $i; ?>" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
+                                            <a href="manage_faculty.php?ethics_edit=<?php echo $entry['id']; ?>#ethics-protocols" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
                                             <form method="post" action="" style="display:inline;">
-                                                <input type="hidden" name="ethics_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="ethics_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_ethics" class="btn btn-danger btn-sm" onclick="return confirm('Delete this entry?');"><i class="fa fa-trash"></i> Delete</button>
                                             </form>
                                         </td>
@@ -1081,6 +1209,36 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="card-custom mt-4" id="publication-presentation">
             <div class="card-header bg-gradient" style="background:linear-gradient(90deg,#43cea2 0%,#185a9d 100%)!important;"><i class="fa fa-book me-2"></i>Manage Publication and Presentation</div>
             <div class="card-body">
+                <!-- Add Publication/Presentation Form -->
+                <form method="post" class="row g-2 mb-3">
+                    <div class="col-md-2"><input type="date" name="pub_date" class="form-control" required></div>
+                    <div class="col-md-2"><input type="text" name="pub_faculty" class="form-control" placeholder="Faculty" required></div>
+                    <div class="col-md-2"><input type="text" name="pub_title" class="form-control" placeholder="Title" required></div>
+                    <div class="col-md-1"><input type="text" name="pub_department" class="form-control" placeholder="Department" required></div>
+                    <div class="col-md-1"><input type="text" name="pub_subsidy" class="form-control" placeholder="Subsidy" required></div>
+                    <div class="col-md-2">
+                        <select name="pub_status" class="form-select" required>
+                            <option value="">Select status</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Submitted">Submitted</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Accepted">Accepted</option>
+                            <option value="Published">Published</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <select name="pub_locality" class="form-select" required>
+                            <option value="">Select scope</option>
+                            <option value="Local">Local</option>
+                            <option value="International">International</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1"><button type="submit" name="add_pub" class="btn btn-custom w-100">Add</button></div>
+                </form>
+                <?php if (!empty($pub_error_message)): ?>
+                    <div class="alert alert-error mb-2"><?php echo htmlspecialchars($pub_error_message); ?></div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
                         <thead>
@@ -1096,37 +1254,51 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($pub_entries as $i => $entry): ?>
-                                <?php if ($pub_edit_index === $i): ?>
-                                    <tr class="table-warning" id="edit-row-pub-<?php echo $i; ?>">
+                            <?php foreach ($pub_entries as $entry): ?>
+                                <?php if (isset($_GET['pub_edit']) && $_GET['pub_edit'] == $entry['id']): ?>
+                                    <tr class="table-warning" id="edit-row-pub-<?php echo $entry['id']; ?>">
                                         <form method="post" action="">
-                                            <td><input type="date" name="date" value="<?php echo htmlspecialchars($entry[0]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry[1]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry[2]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="department" value="<?php echo htmlspecialchars($entry[3]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="subsidy" value="<?php echo htmlspecialchars($entry[4]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="status" value="<?php echo htmlspecialchars($entry[5]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="locality" value="<?php echo htmlspecialchars($entry[6]); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="date" name="date" value="<?php echo htmlspecialchars($entry['application_date']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="faculty" value="<?php echo htmlspecialchars($entry['author_name']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="title" value="<?php echo htmlspecialchars($entry['paper_title']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="department" value="<?php echo htmlspecialchars($entry['department']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="subsidy" value="<?php echo htmlspecialchars($entry['research_subsidy']); ?>" class="form-control form-control-sm" required></td>
                                             <td>
-                                                <input type="hidden" name="pub_index" value="<?php echo $i; ?>">
+                                                <select name="status" class="form-select form-select-sm" required>
+                                                    <option value="Draft" <?php if ($entry['status']==='Draft') echo 'selected'; ?>>Draft</option>
+                                                    <option value="Submitted" <?php if ($entry['status']==='Submitted') echo 'selected'; ?>>Submitted</option>
+                                                    <option value="Under Review" <?php if ($entry['status']==='Under Review') echo 'selected'; ?>>Under Review</option>
+                                                    <option value="Accepted" <?php if ($entry['status']==='Accepted') echo 'selected'; ?>>Accepted</option>
+                                                    <option value="Published" <?php if ($entry['status']==='Published') echo 'selected'; ?>>Published</option>
+                                                    <option value="Rejected" <?php if ($entry['status']==='Rejected') echo 'selected'; ?>>Rejected</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="locality" class="form-select form-select-sm" required>
+                                                    <option value="Local" <?php if ($entry['scope']==='Local') echo 'selected'; ?>>Local</option>
+                                                    <option value="International" <?php if ($entry['scope']==='International') echo 'selected'; ?>>International</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="pub_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="save_pub_edit" class="btn btn-custom btn-sm"><i class="fa fa-save"></i> Save</button>
-                                                <a href="manage_faculty.php" class="btn btn-secondary btn-sm">Cancel</a>
+                                                <a href="manage_faculty.php#publication-presentation" class="btn btn-secondary btn-sm">Cancel</a>
                                             </td>
                                         </form>
                                     </tr>
                                 <?php else: ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($entry[0]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[1]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[2]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[3]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[4]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[5]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[6]); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['application_date']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['author_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['paper_title']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['department']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['research_subsidy']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['status']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['scope']); ?></td>
                                         <td>
-                                            <a href="manage_faculty.php?pub_edit=<?php echo $i; ?>" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
+                                            <a href="manage_faculty.php?pub_edit=<?php echo $entry['id']; ?>#publication-presentation" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
                                             <form method="post" action="" style="display:inline;">
-                                                <input type="hidden" name="pub_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="pub_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_pub" class="btn btn-danger btn-sm" onclick="return confirm('Delete this entry?');"><i class="fa fa-trash"></i> Delete</button>
                                             </form>
                                         </td>
@@ -1141,6 +1313,26 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
         <div class="card-custom mt-4" id="research-capacity">
             <div class="card-header bg-gradient" style="background:linear-gradient(90deg,#11998e 0%,#38ef7d 100%)!important;"><i class="fa fa-chalkboard-teacher me-2"></i>Manage Research Capacity Building Activities</div>
             <div class="card-body">
+                <!-- Add Research Capacity Activity Form -->
+                <form method="post" class="row g-2 mb-3">
+                    <div class="col-md-2"><input type="date" name="rcb_date" class="form-control" required></div>
+                    <div class="col-md-2"><input type="text" name="rcb_name" class="form-control" placeholder="Activity Name" required></div>
+                    <div class="col-md-2"><input type="text" name="rcb_venue" class="form-control" placeholder="Venue" required></div>
+                    <div class="col-md-2"><input type="text" name="rcb_facilitators" class="form-control" placeholder="Facilitators" required></div>
+                    <div class="col-md-2"><input type="number" name="rcb_num_participants" class="form-control" placeholder="No. of Participants" min="0" required></div>
+                    <div class="col-md-1">
+                        <select name="rcb_status" class="form-select" required>
+                            <option value="Completed">Completed</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1"><button type="submit" name="add_rcb" class="btn btn-custom w-100">Add</button></div>
+                </form>
+                <?php if (!empty($rcb_error_message)): ?>
+                    <div class="alert alert-error mb-2"><?php echo htmlspecialchars($rcb_error_message); ?></div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle">
                         <thead>
@@ -1155,35 +1347,42 @@ if (isset($_POST['save_rcb_edit']) && isset($_POST['rcb_index'])) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($rcb_entries as $i => $entry): ?>
-                                <?php if ($rcb_edit_index === $i): ?>
-                                    <tr class="table-warning" id="edit-row-rcb-<?php echo $i; ?>">
+                            <?php foreach ($rcb_entries as $entry): ?>
+                                <?php if (isset($_GET['rcb_edit']) && $_GET['rcb_edit'] == $entry['id']): ?>
+                                    <tr class="table-warning" id="edit-row-rcb-<?php echo $entry['id']; ?>">
                                         <form method="post" action="">
-                                            <td><input type="date" name="date" value="<?php echo htmlspecialchars($entry[0]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="name" value="<?php echo htmlspecialchars($entry[1]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="venue" value="<?php echo htmlspecialchars($entry[2]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="facilitators" value="<?php echo htmlspecialchars($entry[3]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="number" name="num_participants" min="0" value="<?php echo htmlspecialchars($entry[4]); ?>" class="form-control form-control-sm" required></td>
-                                            <td><input type="text" name="status" value="<?php echo htmlspecialchars($entry[5]); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="date" name="date" value="<?php echo htmlspecialchars($entry['activity_date']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="name" value="<?php echo htmlspecialchars($entry['activity_title']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="venue" value="<?php echo htmlspecialchars($entry['venue']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="text" name="facilitators" value="<?php echo htmlspecialchars($entry['organizer']); ?>" class="form-control form-control-sm" required></td>
+                                            <td><input type="number" name="num_participants" min="0" value="<?php echo htmlspecialchars($entry['participants_count']); ?>" class="form-control form-control-sm" required></td>
                                             <td>
-                                                <input type="hidden" name="rcb_index" value="<?php echo $i; ?>">
+                                                <select name="status" class="form-select form-select-sm" required>
+                                                    <option value="Completed" <?php if ($entry['status']==='Completed') echo 'selected'; ?>>Completed</option>
+                                                    <option value="In Progress" <?php if ($entry['status']==='In Progress') echo 'selected'; ?>>In Progress</option>
+                                                    <option value="Scheduled" <?php if ($entry['status']==='Scheduled') echo 'selected'; ?>>Scheduled</option>
+                                                    <option value="Cancelled" <?php if ($entry['status']==='Cancelled') echo 'selected'; ?>>Cancelled</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="rcb_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="save_rcb_edit" class="btn btn-custom btn-sm"><i class="fa fa-save"></i> Save</button>
-                                                <a href="manage_faculty.php" class="btn btn-secondary btn-sm">Cancel</a>
+                                                <a href="manage_faculty.php#research-capacity" class="btn btn-secondary btn-sm">Cancel</a>
                                             </td>
                                         </form>
                                     </tr>
                                 <?php else: ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($entry[0]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[1]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[2]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[3]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[4]); ?></td>
-                                        <td><?php echo htmlspecialchars($entry[5]); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['activity_date']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['activity_title']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['venue']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['organizer']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['participants_count']); ?></td>
+                                        <td><?php echo htmlspecialchars($entry['status']); ?></td>
                                         <td>
-                                            <a href="manage_faculty.php?rcb_edit=<?php echo $i; ?>" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
+                                            <a href="manage_faculty.php?rcb_edit=<?php echo $entry['id']; ?>#research-capacity" class="btn btn-custom btn-sm"><i class="fa fa-edit"></i> Edit</a>
                                             <form method="post" action="" style="display:inline;">
-                                                <input type="hidden" name="rcb_index" value="<?php echo $i; ?>">
+                                                <input type="hidden" name="rcb_id" value="<?php echo $entry['id']; ?>">
                                                 <button type="submit" name="delete_rcb" class="btn btn-danger btn-sm" onclick="return confirm('Delete this entry?');"><i class="fa fa-trash"></i> Delete</button>
                                             </form>
                                         </td>

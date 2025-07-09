@@ -328,7 +328,7 @@ try {
             </div>
             <div class="form-group">
               <label for="performance_score">KPI Score</label>
-              <input type="number" step="0.01" id="performance_score" name="performance_score" min="0" value="0" required>
+              <input type="number" step="0.01" id="performance_score" name="performance_score" min="0" max="10" value="0" required>
             </div>
             <div class="form-group">
               <label for="performance_rating">Performance</label>
@@ -383,7 +383,7 @@ try {
             </div>
             <div class="form-group">
               <label for="edit_performance_score">KPI Score</label>
-              <input type="number" step="0.01" id="edit_performance_score" name="performance_score" min="0" required>
+              <input type="number" step="0.01" id="edit_performance_score" name="performance_score" min="0" max="10" required>
             </div>
             <div class="form-group">
               <label for="edit_performance_rating">Performance</label>

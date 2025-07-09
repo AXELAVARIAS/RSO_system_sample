@@ -406,15 +406,14 @@ if (isset($_GET['edit'])) {
         </div>
         
         <div class="table-container">
-          <form id="bulkDeleteForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
-            <div class="bulk-delete-bar">
-              <div class="select-all-container">
-                <input type="checkbox" id="selectAll" class="styled-checkbox">
-                <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
-              </div>
-              <button type="submit" name="bulk_delete" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+          <div class="bulk-delete-bar">
+            <div class="select-all-container">
+              <input type="checkbox" id="selectAll" class="styled-checkbox">
+              <label for="selectAll" style="margin-left: 0.4em; font-size: 0.97em; cursor:pointer;">Select All</label>
             </div>
-            <table class="data-table" id="publicationsTable">
+            <button type="button" class="btn btn-danger" id="bulkDeleteBtn" disabled style="margin-bottom: 1rem;">Delete Selected</button>
+          </div>
+          <table class="data-table" id="publicationsTable">
               <thead>
                 <tr>
                   <th style="width:32px;"></th>
@@ -446,7 +445,7 @@ if (isset($_GET['edit'])) {
                 <?php else: ?>
                   <?php foreach ($entries as $i => $entry): ?>
                   <tr data-id="<?php echo $entry['id']; ?>">
-                    <td><input type="checkbox" class="row-checkbox styled-checkbox" name="selected_ids[]" value="<?php echo $entry['id']; ?>"></td>
+                    <td><input type="checkbox" class="row-checkbox styled-checkbox" value="<?php echo $entry['id']; ?>"></td>
                     <td data-label="Date OF Application">
                       <span class="date-info"><?php echo htmlspecialchars($entry['application_date']); ?></span>
                     </td>
@@ -494,7 +493,6 @@ if (isset($_GET['edit'])) {
                 <?php endif; ?>
               </tbody>
             </table>
-          </form>
         </div>
       </div>
     </div>
@@ -559,16 +557,16 @@ if (isset($_GET['edit'])) {
       opacity: 1;
       pointer-events: auto;
     }
-    #bulkDeleteForm.show-all-checkboxes .styled-checkbox {
+    body.show-all-checkboxes .styled-checkbox {
       opacity: 1;
       pointer-events: auto;
     }
 
     /* Hide select-all container by default */
-    #bulkDeleteForm .select-all-container {
+    .select-all-container {
       display: none;
     }
-    #bulkDeleteForm.show-all-checkboxes .select-all-container {
+    body.show-all-checkboxes .select-all-container {
       display: flex !important;
       align-items: center;
     }
@@ -577,7 +575,7 @@ if (isset($_GET['edit'])) {
     #bulkDeleteBtn {
       display: none;
     }
-    #bulkDeleteForm.show-all-checkboxes #bulkDeleteBtn {
+    body.show-all-checkboxes #bulkDeleteBtn {
       display: inline-block;
     }
 
@@ -1101,17 +1099,16 @@ if (isset($_GET['edit'])) {
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
     const selectAll = document.getElementById('selectAll');
-    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
     
     function updateBulkDeleteBtn() {
       let checkedCount = 0;
       rowCheckboxes.forEach(cb => { if (cb.checked) checkedCount++; });
       if (checkedCount > 0) {
         bulkDeleteBtn.disabled = false;
-        bulkDeleteForm.classList.add('show-all-checkboxes');
+        document.body.classList.add('show-all-checkboxes');
       } else {
         bulkDeleteBtn.disabled = true;
-        bulkDeleteForm.classList.remove('show-all-checkboxes');
+        document.body.classList.remove('show-all-checkboxes');
       }
       // Update selectAll checkbox state
       if (selectAll) {
@@ -1128,18 +1125,38 @@ if (isset($_GET['edit'])) {
       }
     }
     
-    // Add form submission debugging
-    bulkDeleteForm.addEventListener('submit', function(e) {
+    // Bulk delete functionality
+    bulkDeleteBtn.addEventListener('click', function() {
       const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
       if (selectedCheckboxes.length === 0) {
-        e.preventDefault();
         alert('Please select at least one publication to delete.');
-        return false;
+        return;
       }
       
-      const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
-      console.log('Submitting bulk delete with IDs:', selectedIds);
+      if (confirm(`Are you sure you want to delete ${selectedCheckboxes.length} publication(s)?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>';
+        
+        const bulkDeleteInput = document.createElement('input');
+        bulkDeleteInput.type = 'hidden';
+        bulkDeleteInput.name = 'bulk_delete';
+        bulkDeleteInput.value = '1';
+        form.appendChild(bulkDeleteInput);
+        
+        selectedCheckboxes.forEach(cb => {
+          const idInput = document.createElement('input');
+          idInput.type = 'hidden';
+          idInput.name = 'selected_ids[]';
+          idInput.value = cb.value;
+          form.appendChild(idInput);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+      }
     });
+    
     rowCheckboxes.forEach(cb => {
       cb.addEventListener('change', updateBulkDeleteBtn);
     });

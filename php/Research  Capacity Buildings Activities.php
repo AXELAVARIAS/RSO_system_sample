@@ -41,11 +41,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error_message = 'No activities selected for deletion.';
             }
         }
-        // Delete entry
-        if (isset($_POST['delete']) && isset($_POST['id'])) {
+        // Delete entry (updated to match ethics protocol page)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete']) && isset($_POST['id'])) {
             $id = (int)$_POST['id'];
-            $db->query("DELETE FROM research_capacity_activities WHERE id = ?", [$id]);
-            $success_message = 'Activity deleted successfully!';
+            try {
+                $db = getDB();
+                $db->query("DELETE FROM research_capacity_activities WHERE id = ?", [$id]);
+                header('Location: ' . $_SERVER['PHP_SELF']);
+                exit;
+            } catch (Exception $e) {
+                $error_message = 'Database error: ' . $e->getMessage();
+            }
         }
         // Save edited entry
         elseif (isset($_POST['save_edit']) && isset($_POST['id'])) {

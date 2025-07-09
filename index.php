@@ -211,9 +211,21 @@ usort($recent_updates, function($a, $b) {
 });
 $recent_updates = array_slice($recent_updates, 0, 5);
 
-// Build research activity trends by month for the current year from database
-$activity_by_month = array_fill(1, 12, 0);
+// Build research activity trends by month for the selected year from database
 $current_year = date('Y');
+$min_year = $current_year;
+$max_year = $current_year;
+try {
+    $years = $db->fetchAll('SELECT MIN(YEAR(activity_date)) as min_year, MAX(YEAR(activity_date)) as max_year FROM research_capacity_activities');
+    if ($years && $years[0]['min_year']) {
+        $min_year = $years[0]['min_year'];
+        $max_year = $years[0]['max_year'];
+    }
+} catch (Exception $e) {
+    // fallback to current year
+}
+$selected_year = isset($_GET['activity_year']) ? (int)$_GET['activity_year'] : $max_year;
+$activity_by_month = array_fill(1, 12, 0);
 try {
     $monthly_activities = $db->fetchAll('
         SELECT 
@@ -222,7 +234,7 @@ try {
         FROM research_capacity_activities 
         WHERE YEAR(activity_date) = ? 
         GROUP BY MONTH(activity_date)
-    ', [$current_year]);
+    ', [$selected_year]);
     
     foreach ($monthly_activities as $activity) {
         $activity_by_month[(int)$activity['month']] = (int)$activity['count'];
@@ -393,6 +405,14 @@ $max_activities = max($activity_by_month) ?: 1;
               <h2>Research Activity Trends</h2>
             </div>
           </div>
+          <form method="get" style="margin-bottom: 16px;">
+            <label for="activity_year" style="font-weight:500;">Year:</label>
+            <select name="activity_year" id="activity_year" onchange="this.form.submit()">
+              <?php for ($y = $max_year; $y >= $min_year; $y--): ?>
+                <option value="<?php echo $y; ?>" <?php if ($selected_year == $y) echo 'selected'; ?>><?php echo $y; ?></option>
+              <?php endfor; ?>
+            </select>
+          </form>
           <div class="chart-container" style="padding: 24px;">
             <div class="activity-chart">
               <?php foreach ($activity_by_month as $month => $count): ?>
