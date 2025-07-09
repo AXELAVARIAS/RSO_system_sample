@@ -245,6 +245,9 @@ try {
 
 $month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 $max_activities = max($activity_by_month) ?: 1;
+// Round up to the next multiple of 10 for scaling
+$max_activities_rounded = ceil($max_activities / 10) * 10;
+if ($max_activities_rounded < 10) $max_activities_rounded = 10;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -413,16 +416,8 @@ $max_activities = max($activity_by_month) ?: 1;
               <?php endfor; ?>
             </select>
           </form>
-          <div class="chart-container" style="padding: 24px;">
-            <div class="activity-chart">
-              <?php foreach ($activity_by_month as $month => $count): ?>
-              <div class="chart-bar">
-                <div class="bar" style="height: <?php echo ($count / $max_activities) * 100; ?>%;"></div>
-                <div class="bar-label"><?php echo $month_names[$month - 1]; ?></div>
-                <div class="bar-value"><?php echo $count; ?></div>
-              </div>
-              <?php endforeach; ?>
-            </div>
+          <div class="chart-container">
+            <canvas id="activityChart"></canvas>
           </div>
         </div>
 
@@ -508,8 +503,9 @@ $max_activities = max($activity_by_month) ?: 1;
       display: flex;
       align-items: end;
       gap: 12px;
-      height: 200px;
+      height: 300px;
       padding: 20px 0;
+      background: rgba(255,0,0,0.07); /* Debug: light red background */
     }
     
     .chart-bar {
@@ -524,8 +520,10 @@ $max_activities = max($activity_by_month) ?: 1;
       width: 100%;
       background: linear-gradient(180deg, var(--btn-primary-bg) 0%, var(--btn-primary-hover) 100%);
       border-radius: 4px 4px 0 0;
-      min-height: 4px;
+      min-height: 0;
       transition: all 0.3s ease;
+      border: 2px solid #fff200; /* Debug: yellow border */
+      align-self: flex-end;
     }
     
     .bar:hover {
@@ -673,9 +671,70 @@ $max_activities = max($activity_by_month) ?: 1;
       color: var(--btn-primary-bg);
       font-weight: 500;
     }
+    .chart-container {
+      width: 100%;
+      max-width: 100%;
+      height: 300px;
+      min-width: 0;
+      padding: 24px;
+    }
+    #activityChart {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    @media (max-width: 600px) {
+      .chart-container {
+        height: 200px;
+        padding: 8px;
+      }
+    }
   </style>
 
   <script src="js/theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Pass PHP data to JS
+    var xValues = <?php echo json_encode($month_names); ?>;
+    var yValues = <?php echo json_encode(array_values($activity_by_month)); ?>;
+    var maxY = Math.max.apply(null, yValues);
+    var stepSize = maxY < 10 ? 1 : 10;
+    var suggestedMax = stepSize === 1 ? Math.max(5, maxY) : Math.ceil(maxY / 10) * 10;
+    var ctx = document.getElementById('activityChart').getContext('2d');
+    var chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: xValues,
+        datasets: [{
+          label: 'Research Activities',
+          backgroundColor: 'rgba(78, 140, 255, 0.7)',
+          borderColor: 'rgba(30, 58, 138, 1)',
+          borderWidth: 1,
+          data: yValues
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 10,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+
+    window.addEventListener('resize', function() {
+      chart.resize();
+    });
+  </script>
   <script>
     // Profile menu toggle
     const profileMenu = document.getElementById('profileMenu');
