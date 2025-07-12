@@ -189,13 +189,6 @@ try {
             <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
           </div>
           <div class="profile-actions">
-            <label class="theme-switch" title="Toggle Theme">
-              <input type="checkbox" id="themeSwitchInput" style="display:none;">
-              <span class="slider">
-                <i class="fa-solid fa-moon moon-icon"></i>
-                <i class="fa-solid fa-sun sun-icon"></i>
-              </span>
-            </label>
             <a href="edit_profile.php" class="profile-action">
               <i class="fas fa-user-edit"></i>
               Edit Profile
@@ -294,6 +287,518 @@ try {
     display: inline-block;
   }
 </style>
+  <style>
+    :root {
+      --bg-header: #18813a;
+      --text-primary: #fff;
+      --text-secondary: #e0e7ef;
+      --text-tertiary: #b6d7c9;
+      --text-dashboard-title: #fff;
+      --text-dashboard-subtitle: #e0e7ef;
+      --border-primary: #b6d7c9;
+      --border-secondary: #e0e7ef;
+      --bg-primary: radial-gradient(circle at 60% 40%, #b3e0ff 0%, #0077b6 60%, #005b8f 100%);
+      --bg-secondary: #e3f2fd;
+      --bg-tertiary: #b3e0ff;
+      --bg-card: #e3f2fd;
+      --bg-modal: #e3f2fd;
+      --bg-dropdown: #e3f2fd;
+      --btn-primary-bg: #ff9800;
+      --btn-primary-hover: #f57c00;
+      --btn-secondary-bg: #b3e0ff;
+      --btn-secondary-hover: #90caf9;
+      --btn-success-bg: #18813a;
+      --btn-success-hover: #145c2c;
+      --btn-danger-bg: #e53935;
+      --btn-danger-hover: #b71c1c;
+      --btn-warning-bg: #ffb300;
+      --btn-warning-hover: #ffa000;
+      --status-approved: #18813a;
+      --status-pending: #ff9800;
+      --status-under-review: #1976d2;
+      --status-rejected: #e53935;
+      --status-draft: #90caf9;
+      --shadow-sm: 0 2px 8px 0 rgba(0, 119, 182, 0.08);
+      --shadow-md: 0 6px 16px -2px rgba(0, 119, 182, 0.12);
+      --shadow-lg: 0 16px 32px -8px rgba(0, 119, 182, 0.18);
+    }
+    body {
+      background: var(--bg-primary) !important;
+      color: #fff !important;
+    }
+    .header {
+      background: var(--bg-header) !important;
+      color: #fff !important;
+      border-bottom: 4px solid #ff9800 !important;
+      box-shadow: 0 4px 16px 0 rgba(0,0,0,0.08);
+    }
+    .logo span {
+      color: #fff !important;
+      text-shadow: 1px 1px 2px #145c2c;
+    }
+    .nav-link {
+      color: #fff !important;
+      background: transparent !important;
+    }
+    .nav-link.active, .nav-link:hover {
+      background: #ff9800 !important;
+      color: #fff !important;
+    }
+    .dashboard-card, .data-card {
+      background: var(--bg-card) !important;
+      border-radius: 18px !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 1.5px solid #b3e0ff !important;
+    }
+    .card-header {
+      background: #ff9800 !important;
+      color: #fff !important;
+      border-radius: 18px 18px 0 0 !important;
+      padding-top: 18px !important;
+      padding-bottom: 12px !important;
+      box-shadow: 0 2px 8px 0 rgba(255,152,0,0.08);
+    }
+    .profile-menu, .profile-dropdown {
+      background: #18813a !important;
+      color: #fff !important;
+      border: none !important;
+      box-shadow: 0 4px 16px 0 rgba(0,0,0,0.10);
+    }
+    .profile-info {
+      background: #18813a !important;
+      border-radius: 12px 12px 0 0 !important;
+      padding: 20px 20px 12px 20px !important;
+      border-bottom: 1.5px solid #145c2c !important;
+    }
+    .profile-name, .profile-role, .profile-type {
+      color: #fff !important;
+    }
+    .profile-action {
+      color: #fff !important;
+    }
+    .profile-btn {
+      background: #18813a !important;
+      color: #fff !important;
+      border: none !important;
+      border-radius: 16px !important;
+      box-shadow: none !important;
+      padding: 8px 14px !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s, color 0.2s, border 0.2s;
+    }
+    .profile-btn:hover {
+      background: #145c2c !important;
+      color: #fff !important;
+      border-color: #ff9800 !important;
+    }
+    .profile-btn .fa-chevron-down {
+      color: #fff !important;
+      font-size: 1.2rem !important;
+    }
+    .profile-img {
+      border: 2px solid #fff !important;
+      box-shadow: 0 1px 4px 0 rgba(20,92,44,0.10);
+      background: #fff;
+      width: 40px !important;
+      height: 40px !important;
+      object-fit: cover;
+      border-radius: 50% !important;
+      margin-right: 0 !important;
+    }
+    .profile-action.logout-btn {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 10px !important;
+      background: #ff9800 !important;
+      color: #fff !important;
+      border-radius: 12px !important;
+      font-weight: 700 !important;
+      font-size: 1.05rem !important;
+      box-shadow: 0 2px 8px 0 rgba(255,152,0,0.12);
+      border: 2px solid #ff9800 !important;
+      margin-top: 12px !important;
+      padding: 14px 0 !important;
+      width: 100%;
+      transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
+    }
+    .profile-action.logout-btn:hover {
+      background: #f57c00 !important;
+      color: #fff !important;
+      border-color: #18813a !important;
+      box-shadow: 0 4px 16px 0 rgba(20,129,58,0.12);
+    }
+    /* Table and data label font color fixes */
+    .data-card {
+      background: #e3f2fd !important;
+    }
+    .data-table th {
+      background: #18813a !important;
+      color: #fff !important;
+      font-weight: 700 !important;
+      border-bottom: 2px solid #b3e0ff !important;
+    }
+    .data-table td,
+    .data-table tbody tr {
+      background: #b3e0ff !important;
+      color: #111 !important;
+      font-weight: 600 !important;
+    }
+    .data-table td[data-label]::before {
+      color: #111 !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px;
+    }
+    /* Modern custom checkbox styles */
+    input[type="checkbox"].styled-checkbox, #selectAll.styled-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #fffbeb !important;
+      border: 2px solid #ffb300 !important;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      vertical-align: middle;
+      margin: 0;
+    }
+    input[type="checkbox"].styled-checkbox:checked, #selectAll.styled-checkbox:checked {
+      background-color: #ffb300 !important;
+      border-color: #ffb300 !important;
+    }
+    input[type="checkbox"].styled-checkbox:checked::after, #selectAll.styled-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 6px;
+      height: 12px;
+      border: solid #fff !important;
+      border-width: 0 3px 3px 0 !important;
+      border-radius: 1px;
+      transform: rotate(45deg);
+      transition: border-color 0.2s;
+    }
+    input[type="checkbox"].styled-checkbox:focus, #selectAll.styled-checkbox:focus {
+      box-shadow: 0 0 0 2px var(--btn-primary-bg, #3b82f6);
+    }
+    /* Hide default checkmark for indeterminate state, show custom style */
+    #selectAll.styled-checkbox:indeterminate {
+      background-color: #ffb300 !important;
+      border-color: #ffb300 !important;
+    }
+    #selectAll.styled-checkbox:indeterminate::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 9px;
+      width: 14px;
+      height: 3px;
+      background: #fff;
+      border-radius: 2px;
+    }
+    /* Make label clickable and align nicely */
+    .select-all-container label {
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 0;
+      margin-left: 0.5em;
+      font-size: 1em;
+      color: var(--text-primary);
+    }
+    /* Slightly increase row checkbox spacing */
+    .data-table td:first-child, .data-table th:first-child {
+      text-align: center;
+      width: 36px;
+    }
+
+    /* Hide row checkboxes by default, show on row hover or if any checked */
+    .data-table .row-checkbox {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .data-table tr:hover .row-checkbox,
+    .data-table.show-all-checkboxes .row-checkbox {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Always show select-all checkbox above the table */
+    .select-all-container .styled-checkbox {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    .bulk-delete-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .select-all-container {
+      display: none;
+    }
+    .select-all-container.visible {
+      display: flex;
+    }
+    /* Info fields font color */
+    .faculty-info,
+    .quarter-info,
+    .publications-info,
+    .trainings-info,
+    .presentations-info,
+    .score-info,
+    .rating-info {
+      color: #111 !important;
+      font-weight: 600 !important;
+    }
+    
+    /* Page actions button text color - make it black */
+    .page-actions .btn {
+      color: #000 !important;
+    }
+    .page-actions .btn-primary {
+      color: #000 !important;
+    }
+    .page-actions .btn-secondary {
+      color: #000 !important;
+    }
+
+    /* Simplified Upload Modal */
+    .upload-modal-simple {
+      max-width: 400px;
+      min-width: 0;
+      width: 100%;
+      padding: 0;
+      background: #e3f2fd; /* Match .data-card */
+      border-radius: 16px;
+      box-shadow: 0 6px 24px 0 rgba(0,119,182,0.12);
+      border: 1.5px solid #b3e0ff;
+    }
+    .upload-modal-simple .modal-header {
+      background: #ff9800;
+      color: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 24px 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #b3e0ff;
+    }
+    .upload-modal-simple .modal-header h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+    }
+    .upload-modal-simple .modal-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 2px 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .upload-modal-simple .modal-close:hover {
+      background: #fff3cd;
+      color: #ff9800;
+    }
+    .upload-modal-simple .modal-body {
+      background: #e3f2fd;
+      padding: 0 24px 18px 24px;
+      border-radius: 0 0 16px 16px;
+    }
+    .upload-simple-instructions {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.2rem 1.2rem 0.5rem 1.2rem;
+      font-size: 1rem;
+      color: #145c2c;
+      margin-bottom: 1rem;
+      border: 1px solid #b3e0ff;
+      box-shadow: 0 2px 8px 0 rgba(0,119,182,0.06);
+    }
+    .upload-simple-instructions p strong {
+      color: #18813a;
+    }
+    .upload-simple-instructions ul {
+      color: #145c2c;
+      font-size: 0.97rem;
+      margin: 0.5rem 0 0.5rem 1.2rem;
+      padding-left: 1.2rem;
+    }
+    .upload-simple-instructions ul ul {
+      font-size: 0.95rem;
+      margin: 0.2rem 0 0.2rem 1.2rem;
+    }
+    .upload-simple-instructions li b {
+      color: #18813a;
+      font-weight: 600;
+    }
+    .upload-simple-instructions li {
+      margin-bottom: 0.2em;
+    }
+    .template-download-simple {
+      margin: 1rem 0 0.5rem 0;
+    }
+    .template-link {
+      color: #ff9800;
+      text-decoration: underline;
+      font-size: 0.98rem;
+      font-weight: 500;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    .template-link:hover {
+      color: #f57c00;
+      text-decoration: none;
+    }
+    .upload-form-simple {
+      padding: 0 1.2rem 1.2rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .file-label-simple {
+      font-weight: 600;
+      color: #18813a;
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    #excelFile {
+      border: 1px solid #b3e0ff;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.97rem;
+      background: #fff;
+      color: #145c2c;
+      width: 100%;
+      margin-bottom: 0.2rem;
+    }
+    #excelFile:focus {
+      outline: 2px solid #ff9800;
+      border-color: #ff9800;
+    }
+    .file-info {
+      margin-top: 0.2rem;
+      padding: 0.4rem 0.7rem;
+      background: #b3e0ff;
+      border-radius: 4px;
+      font-size: 0.93rem;
+      color: #145c2c;
+      width: 100%;
+      word-break: break-all;
+    }
+    .upload-progress {
+      margin-top: 0.5rem;
+      background: #e3f2fd;
+      border-radius: 6px;
+      padding: 0.5rem 0.7rem;
+      box-shadow: 0 1px 4px 0 rgba(0,119,182,0.06);
+    }
+    .progress-bar {
+      background: #b3e0ff;
+      border-radius: 6px;
+      height: 8px;
+      width: 100%;
+      margin-bottom: 0.3rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+      height: 100%;
+      width: 0%;
+      border-radius: 6px;
+      transition: width 0.3s;
+    }
+    .progress-text {
+      font-size: 0.93rem;
+      color: #18813a;
+      font-weight: 600;
+      text-align: center;
+    }
+    .upload-result {
+      margin-top: 0.5rem;
+      padding: 0.7rem 1rem;
+      border-radius: 6px;
+      font-size: 0.97rem;
+      font-weight: 500;
+      background: #fff3cd;
+      color: #18813a;
+      border: 1px solid #ffe082;
+      box-shadow: 0 1px 4px 0 rgba(255,193,7,0.06);
+    }
+    .upload-result.error {
+      background: #ffebee;
+      color: #e53935;
+      border: 1px solid #ffcdd2;
+    }
+    .upload-result.success {
+      background: #e8f5e9;
+      color: #18813a;
+      border: 1px solid #b9f6ca;
+    }
+    .simple-footer {
+      padding: 1rem 1.2rem 1rem 1.2rem;
+      border-top: 1px solid #b3e0ff;
+      background: #e3f2fd;
+      border-radius: 0 0 16px 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+    .simple-footer .btn-primary {
+      background: #ff9800;
+      color: #000;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 8px 0 rgba(255,152,0,0.10);
+      transition: background 0.2s, color 0.2s;
+    }
+    .simple-footer .btn-primary:hover {
+      background: #f57c00;
+      color: #fff;
+    }
+    .simple-footer .btn-secondary {
+      background: #b3e0ff;
+      color: #000;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 8px 0 rgba(179,224,255,0.10);
+      transition: background 0.2s, color 0.2s;
+    }
+    .simple-footer .btn-secondary:hover {
+      background: #90caf9;
+      color: #18813a;
+    }
+    @media (max-width: 600px) {
+      .upload-modal-simple {
+        max-width: 98vw;
+        min-width: 0;
+        padding: 0;
+      }
+      .upload-simple-instructions, .upload-form-simple {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+      .simple-footer {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+    }
+  </style>
 
       <!-- Add KPI Modal -->
       <div class="modal" id="addModal">
@@ -697,7 +1202,7 @@ uploadModal.addEventListener('click', (e) => {
 });
 </script>
 <script>
-// Bulk delete button enable/disable and select all logic (copied and adapted from Data Collection Tools)
+// Bulk delete button enable/disable and show-all-checkboxes logic
 const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
 const rowCheckboxes = document.querySelectorAll('.row-checkbox');
 const selectAll = document.getElementById('selectAll');
@@ -712,6 +1217,7 @@ function updateBulkDeleteBtn() {
     bulkDeleteBtn.style.display = 'none';
     bulkDeleteBtn.disabled = true;
   }
+  // Show select-all if at least 1 is checked OR select-all is checked/indeterminate
   if (selectAllContainer) {
     if (
       checkedCount > 0 ||
@@ -722,14 +1228,16 @@ function updateBulkDeleteBtn() {
       selectAllContainer.classList.remove('visible');
     }
   }
-  const bulkDeleteForm = document.getElementById('bulkDeleteForm');
-  if (bulkDeleteForm) {
+  // Show all checkboxes if any are checked
+  const dataTable = document.getElementById('kpiTable');
+  if (dataTable) {
     if (checkedCount > 0) {
-      bulkDeleteForm.classList.add('show-all-checkboxes');
+      dataTable.classList.add('show-all-checkboxes');
     } else {
-      bulkDeleteForm.classList.remove('show-all-checkboxes');
+      dataTable.classList.remove('show-all-checkboxes');
     }
   }
+  // Update selectAll checkbox state
   if (selectAll) {
     if (checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0) {
       selectAll.checked = true;

@@ -325,17 +325,6 @@ if ($max_activities_rounded < 10) $max_activities_rounded = 10;
             <div class="profile-type"><?php echo htmlspecialchars(ucfirst($_SESSION['user_type'] ?? '')); ?></div>
           </div>
           <div class="profile-actions">
-            <!-- Theme Toggle Switch -->
-            <button class="theme-toggle" title="Toggle Theme" style="margin-left:0;display:none;">
-              <i class="fa-solid fa-moon"></i>
-            </button>
-            <label class="theme-switch" title="Toggle Theme">
-              <input type="checkbox" id="themeSwitchInput" style="display:none;">
-              <span class="slider">
-                <i class="fa-solid fa-moon moon-icon"></i>
-                <i class="fa-solid fa-sun sun-icon"></i>
-              </span>
-            </label>
             <a href="php/edit_profile.php" class="profile-action">
               <i class="fa-solid fa-user-pen"></i>
               Edit Profile
@@ -688,6 +677,195 @@ if ($max_activities_rounded < 10) $max_activities_rounded = 10;
         height: 200px;
         padding: 8px;
       }
+    }
+  </style>
+  <!-- Custom UC Theme Overrides -->
+  <style>
+    :root {
+      /* UC Light Mode Colors */
+      --bg-header: #18813a;
+      --text-primary: #fff;
+      --text-secondary: #e0e7ef;
+      --text-tertiary: #b6d7c9;
+      --text-dashboard-title: #fff;
+      --text-dashboard-subtitle: #e0e7ef;
+      --border-primary: #b6d7c9;
+      --border-secondary: #e0e7ef;
+      --bg-primary: radial-gradient(circle at 60% 40%, #b3e0ff 0%, #0077b6 60%, #005b8f 100%);
+      --bg-secondary: #e3f2fd;
+      --bg-tertiary: #b3e0ff;
+      --bg-card: #e3f2fd;
+      --bg-modal: #e3f2fd;
+      --bg-dropdown: #e3f2fd;
+      --btn-primary-bg: #ff9800;
+      --btn-primary-hover: #f57c00;
+      --btn-secondary-bg: #b3e0ff;
+      --btn-secondary-hover: #90caf9;
+      --btn-success-bg: #18813a;
+      --btn-success-hover: #145c2c;
+      --btn-danger-bg: #e53935;
+      --btn-danger-hover: #b71c1c;
+      --btn-warning-bg: #ffb300;
+      --btn-warning-hover: #ffa000;
+      --status-approved: #18813a;
+      --status-pending: #ff9800;
+      --status-under-review: #1976d2;
+      --status-rejected: #e53935;
+      --status-draft: #90caf9;
+      --shadow-sm: 0 2px 8px 0 rgba(0, 119, 182, 0.08);
+      --shadow-md: 0 6px 16px -2px rgba(0, 119, 182, 0.12);
+      --shadow-lg: 0 16px 32px -8px rgba(0, 119, 182, 0.18);
+    }
+    body {
+      background: var(--bg-primary) !important;
+      color: #fff !important;
+    }
+    .header {
+      background: var(--bg-header) !important;
+      color: #fff !important;
+      border-bottom: 4px solid #ff9800 !important;
+      box-shadow: 0 4px 16px 0 rgba(0,0,0,0.08);
+    }
+    .logo span {
+      color: #fff !important;
+      text-shadow: 1px 1px 2px #145c2c;
+    }
+    .nav-link {
+      color: #fff !important;
+      background: transparent !important;
+    }
+    .nav-link.active, .nav-link:hover {
+      background: #ff9800 !important;
+      color: #fff !important;
+    }
+    .dashboard-card, .data-card {
+      background: var(--bg-card) !important;
+      border-radius: 18px !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 1.5px solid #b3e0ff !important;
+    }
+    .dashboard-card .card-title, .data-card .card-title {
+      color: #18813a !important;
+      font-weight: 700;
+    }
+    .dashboard-card .card-value {
+      color: #1976d2 !important;
+      font-weight: 700;
+    }
+    .card-header {
+      background: #ff9800 !important;
+      color: #fff !important;
+      border-radius: 18px 18px 0 0 !important;
+      padding-top: 18px !important;
+      padding-bottom: 12px !important;
+      box-shadow: 0 2px 8px 0 rgba(255,152,0,0.08);
+    }
+    .profile-menu, .profile-dropdown {
+      background: #18813a !important;
+      color: #fff !important;
+      border: none !important;
+      box-shadow: 0 4px 16px 0 rgba(0,0,0,0.10);
+    }
+    .profile-info {
+      background: #18813a !important;
+      border-radius: 12px 12px 0 0 !important;
+      padding: 20px 20px 12px 20px !important;
+      border-bottom: 1.5px solid #145c2c !important;
+    }
+    .profile-name, .profile-role, .profile-type {
+      color: #fff !important;
+    }
+    .profile-action {
+      color: #fff !important;
+    }
+    .profile-btn {
+      background: #18813a !important;
+      color: #fff !important;
+      border: none !important;
+      border-radius: 16px !important;
+      box-shadow: none !important;
+      padding: 8px 14px !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s, color 0.2s, border 0.2s;
+    }
+    .profile-btn:hover {
+      background: #145c2c !important;
+      color: #fff !important;
+      border-color: #ff9800 !important;
+    }
+    .profile-btn .fa-chevron-down {
+      color: #fff !important;
+      font-size: 1.2rem !important;
+    }
+    .profile-img {
+      border: 2px solid #fff !important;
+      box-shadow: 0 1px 4px 0 rgba(20,92,44,0.10);
+      background: #fff;
+      width: 40px !important;
+      height: 40px !important;
+      object-fit: cover;
+      border-radius: 50% !important;
+      margin-right: 0 !important;
+    }
+    .profile-action.logout-btn {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 10px !important;
+      background: #ff9800 !important;
+      color: #fff !important;
+      border-radius: 12px !important;
+      font-weight: 700 !important;
+      font-size: 1.05rem !important;
+      box-shadow: 0 2px 8px 0 rgba(255,152,0,0.12);
+      border: 2px solid #ff9800 !important;
+      margin-top: 12px !important;
+      padding: 14px 0 !important;
+      width: 100%;
+      transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
+    }
+    .profile-action.logout-btn:hover {
+      background: #f57c00 !important;
+      color: #fff !important;
+      border-color: #18813a !important;
+      box-shadow: 0 4px 16px 0 rgba(20,129,58,0.12);
+    }
+    .updates-list {
+      background: #e3f2fd !important;
+      border-radius: 12px !important;
+      box-shadow: 0 2px 8px 0 rgba(0,119,182,0.08);
+    }
+    .update-item {
+      background: transparent !important;
+      border-bottom: 1px solid #b3e0ff !important;
+    }
+    .update-title {
+      color: #18813a !important;
+    }
+    .update-meta {
+      color: #1976d2 !important;
+    }
+    .update-date, .update-upload-date {
+      color: #ff9800 !important;
+    }
+    .chart-container {
+      background: #b3e0ff !important;
+      border-radius: 16px !important;
+      box-shadow: 0 2px 8px 0 rgba(0,119,182,0.08);
+    }
+    /* Scrollbar styling for blue theme */
+    .updates-list::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #1976d2 0%, #90caf9 100%) !important;
+      border: 2px solid #e3f2fd !important;
+    }
+    .updates-list::-webkit-scrollbar-track {
+      background: #b3e0ff !important;
+    }
+    /* For Firefox */
+    .updates-list {
+      scrollbar-color: #1976d2 #b3e0ff !important;
     }
   </style>
 
